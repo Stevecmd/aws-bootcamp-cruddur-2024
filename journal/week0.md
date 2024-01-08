@@ -278,9 +278,9 @@ blinker
 rollbar
 ```
 
-## Save the work on its own branch named "week-1"
+## Save the work on its own branch named "week-0"
 ```sh
-git checkout -b week-1
+git checkout -b week-0
 ```
 
 ## Commit
@@ -295,7 +295,7 @@ git push
 ```
 ### Tag the commit
 ```sh
-git tag -a week1 -m "Setting up project env vars"
+git tag -a week0 -m "Setting up project env vars"
 ```
 ### Push your tags
 ```sh

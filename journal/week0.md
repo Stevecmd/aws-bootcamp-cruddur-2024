@@ -1,18 +1,34 @@
-# Week 1 — Billing and Architecture
+# Week 0 — Billing and Architecture
+---
+**Todo Checklist:**
+- [x] [Watched Week 0 - Live Streamed Video](https://www.youtube.com/watch?v=tDPqmwKMP7Y&list=PLBfufR7vyJJ7k25byhRXJldB5AiwgNnWv&index=29)
+- [x] [Watched Chirag's Week 0 - Spend Considerations](https://www.youtube.com/watch?v=FKAScachFgk&list=PLBfufR7vyJJ7k25byhRXJldB5AiwgNnWv&index=25)
+- [x] [Watched Ashish's Week 0 - Security Considerations](https://www.youtube.com/watch?v=zJnNe5Nv4tE&list=PLBfufR7vyJJ7k25byhRXJldB5AiwgNnWv&index=22)
+- [x] [Recreate Conceptual Diagram in Lucid Charts or on a Napkin](https://www.youtube.com/watch?v=b-idMgFFcpg&list=PLBfufR7vyJJ7k25byhRXJldB5AiwgNnWv&index=23)
+- [x] [Recreate Logical Architectual Diagram in Lucid Charts](https://www.youtube.com/watch?v=OAMHu1NiYoI&list=PLBfufR7vyJJ7k25byhRXJldB5AiwgNnWv&index=24)
+- [x] [Create an Admin User](https://www.youtube.com/watch?v=OdUnNuKylHg&list=PLBfufR7vyJJ7k25byhRXJldB5AiwgNnWv&index=14)
+- [x] Use CloudShell
+- [x] Generate AWS Credentials
+- [x] Installed AWS CLI
+- [x] Create a Billing Alarm
+- [x] Create a Budget
 
+- [x] Complete 100% of the tasks
+
+<hr/>
 
 ## Getting the AWS CLI Working
 
 We'll be using the AWS CLI often in this bootcamp,
 so we'll proceed to installing this account.
 
+<hr/>
 
 ### Install AWS CLI
 
 - We are going to install the AWS CLI when our Gitpod enviroment lanuches.
 - We are are going to set AWS CLI to use partial autoprompt mode to make it easier to debug CLI commands.
 - The bash commands we are using are the same as the [AWS CLI Install Instructions](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
-
 
 Update our `.gitpod.yml` to include the following task.
 
@@ -34,6 +50,8 @@ vscode:
 
 We'll also run these commands individually to perform the install manually at first.
 
+<hr/>
+
 ### Create a new User and Generate AWS Credentials
 
 - Go to [IAM Users Console](https://us-east-1.console.aws.amazon.com/iamv2/home?region=us-east-1#/users) and create a new user
@@ -43,6 +61,8 @@ We'll also run these commands individually to perform the install manually at fi
 - Click on `Security Credentials` and `Create Access Key`
 - Choose AWS CLI Access
 - Download the CSV with the credentials and store it securely
+
+<hr/>
 
 ### Set Env Vars
 
@@ -67,6 +87,8 @@ env | grep AWS_SECRET_ACCESS_KEY
 env | grep AWS_DEFAULT_REGION
 ```
 
+<hr/>
+
 ### Check that the AWS CLI is working and you are the expected user
 
 ```sh
@@ -82,6 +104,8 @@ Output should be similar to:
 }
 ```
 
+<hr/>
+
 ## Enable Billing via console
 
 Turn on Billing Alerts to recieve alerts...
@@ -90,6 +114,7 @@ Turn on Billing Alerts to recieve alerts...
 - Under `Billing Preferences` Choose `Receive Billing Alerts`
 - Save Preferences
 
+<hr/>
 
 ## Creating a Billing Alarm via CLI
 
@@ -114,6 +139,8 @@ aws sns subscribe \
 ```
 
 Check your email and confirm the subscription
+
+<hr/>
 
 ## Create an AWS Budget
 
@@ -210,6 +237,8 @@ aws budgets create-budget \
     --budget file://aws/json/budget.json \
     --notifications-with-subscribers file://aws/json/budget-notifications-with-subscribers.json
 ```
+<hr/>
+
 #### Create Alarm
 
 - [aws cloudwatch put-metric-alarm](https://docs.aws.amazon.com/cli/latest/reference/cloudwatch/put-metric-alarm.html)
@@ -259,6 +288,7 @@ Deploy the creation of the alarm:
 ```sh
 aws cloudwatch put-metric-alarm --cli-input-json file://aws/json/alarm-config.json
 ```
+<hr/>
 
 ## Add the Backend dependencies to the requirements file
 ```sh
@@ -277,11 +307,13 @@ watchtower
 blinker
 rollbar
 ```
+<hr/>
 
-## Save the work on its own branch named "week-1"
+## Save the work on its own branch named "week-0"
 ```sh
-git checkout -b week-1
+git checkout -b week-0
 ```
+<hr/>
 
 ## Commit
 Add the changes and create a commit named: "Install AWS CLI into Gitpod tasks"
@@ -289,15 +321,47 @@ Add the changes and create a commit named: "Install AWS CLI into Gitpod tasks"
 git add .
 git commit -m "Install AWS CLI into Gitpod tasks"
 ```
-Push your changes
+Push your changes to the branch
 ```sh
-git push
+git push origin week-0
 ```
+<hr/>
+
 ### Tag the commit
 ```sh
-git tag -a week1 -m "Setting up project env vars"
+git tag -a week-0 -m "Setting up project env vars"
 ```
+<hr/>
+
 ### Push your tags
 ```sh
 git push --tags
 ```
+<hr/>
+
+### Switching Between Branches back to Main
+```sh
+git checkout main
+```
+<hr/>
+
+### Merge Changes
+```sh
+git merge week-0
+```
+<hr/>
+
+### Push Changes to Main
+```sh
+git push origin main
+```
+<hr/>
+
+#### Branches?
+If you want to keep the "week-1" branch for future reference or additional work, 
+you can keep it as is. If you no longer need the branch, you can delete it after merging.
+```sh
+git branch -d week-1  # Deletes the local branch
+git push origin --delete week-1  # Deletes the remote branch
+```
+

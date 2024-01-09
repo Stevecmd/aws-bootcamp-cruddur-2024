@@ -1,4 +1,4 @@
-# Week 0 — Billing and Architecture
+# Week 1 — Billing and Architecture
 
 
 ## Getting the AWS CLI Working
@@ -108,8 +108,8 @@ This will return a TopicARN
 We'll create a subscription by supplying the TopicARN and our Email
 ```sh
 aws sns subscribe \
-    --topic-arn <TopicARN> \
-    --protocol email \
+    --topic-arn= <TopicARN> \
+    --protocol= email \
     --notification-endpoint <your@email.com>
 ```
 
@@ -149,7 +149,7 @@ Create a file named 'budget.json' and insert the code below:
 ```sh
 {
     "BudgetLimit": {
-        "Amount": "5",
+        "Amount": "1",
         "Unit": "USD"
     },
     "BudgetName": "Example Tag Budget",
@@ -202,7 +202,7 @@ Create a file named 'budget-notifications-with-subscribers.json' and insert the 
 Then run the following code in the CLI:
 
 ```sh
-cd backend-flask
+cd aws-bootcamp-cruddur-2024
 ```
 ```sh
 aws budgets create-budget \
@@ -217,14 +217,14 @@ aws budgets create-budget \
 - We need to update the configuration json script with the TopicARN we generated earlier
 - We are just a json file because --metrics is is required for expressions and so its easier to us a JSON file.
 
-Create the file json/alarm-config.json and insert the following code:
+Create the file json/alarm-config.json and insert the following code and also edit the ACCOUNT_ID to match your aws account id:
 ```sh
 {
     "AlarmName": "DailyEstimatedCharges",
     "AlarmDescription": "This alarm would be triggered if the daily estimated charges exceeds 1$",
     "ActionsEnabled": true,
     "AlarmActions": [
-        "arn:aws:sns:us-east-1:244933296429:billing-alarm"
+        "arn:aws:sns:us-east-1:<ACCOUNT_ID>:billing-alarm"
     ],
     "EvaluationPeriods": 1,
     "DatapointsToAlarm": 1,
@@ -257,7 +257,7 @@ Create the file json/alarm-config.json and insert the following code:
 ```
 Deploy the creation of the alarm:
 ```sh
-aws cloudwatch put-metric-alarm --cli-input-json file://aws/json/alarm_config.json
+aws cloudwatch put-metric-alarm --cli-input-json file://aws/json/alarm-config.json
 ```
 
 ## Add the Backend dependencies to the requirements file
@@ -278,9 +278,9 @@ blinker
 rollbar
 ```
 
-## Save the work on its own branch named "week-0"
+## Save the work on its own branch named "week-1"
 ```sh
-git checkout -b week-0
+git checkout -b week-1
 ```
 
 ## Commit
@@ -295,7 +295,7 @@ git push
 ```
 ### Tag the commit
 ```sh
-git tag -a week0 -m "Setting up project env vars"
+git tag -a week1 -m "Setting up project env vars"
 ```
 ### Push your tags
 ```sh

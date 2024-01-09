@@ -9,7 +9,7 @@ so we'll proceed to installing this account.
 
 ### Install AWS CLI
 
-- We are going to install the AWS CLI when our Gitpod enviroment lanuches.
+- We are going to install the AWS CLI when our Gitpod enviroment launches.
 - We are are going to set AWS CLI to use partial autoprompt mode to make it easier to debug CLI commands.
 - The bash commands we are using are the same as the [AWS CLI Install Instructions](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
 
@@ -33,6 +33,13 @@ vscode:
 ```
 
 We'll also run these commands individually to perform the install manually at first.
+
+Alternatively, to install all the dependencies in the 'requirements.txt' file automatically run:
+
+```sh
+cd backend-flask/
+pip install -r requirements.txt
+```
 
 ### Create a new User and Generate AWS Credentials
 
@@ -126,12 +133,7 @@ aws sts get-caller-identity --query Account --output text
 
 - Supply your AWS Account ID
   ```
-  ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-  ```
-
-- Make your AWS Account ID an env var
-  ```
-  export ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+  AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
   ```
 
 - Confirm your AWS Account ID env var has been saved
@@ -142,8 +144,17 @@ aws sts get-caller-identity --query Account --output text
   ```
   export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 
-  gp env AWS_ACCOUNT_ID="<insert account id>"
+  gp env AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
    ```
+
+- Create a the folder aws :
+```sh
+cd aws-bootcamp-cruddur-2024 
+mkdir aws 
+cd aws 
+mkdir json && cd json
+touch budget.json
+```   
 - Update the json files in aws/json :
 Create a file named 'budget.json' and insert the code below:
 ```sh
@@ -180,7 +191,13 @@ Create a file named 'budget.json' and insert the code below:
 }
 ```
 
-Create a file named 'budget-notifications-with-subscribers.json' and insert the code below:
+Within the folder 'aws/json', create a file named 'budget-notifications-with-subscribers.json' and insert the code below:
+
+```sh
+touch budget-notifications-with-subscribers.json
+```
+**Make sure to insert your email `<Your email>`**
+
 ```sh
 [
     {
@@ -260,7 +277,7 @@ Deploy the creation of the alarm:
 aws cloudwatch put-metric-alarm --cli-input-json file://aws/json/alarm-config.json
 ```
 
-## Add the Backend dependencies to the requirements file
+## Make sure to add the Backend dependencies to the requirements file
 ```sh
 backend-flask/requirements.txt
 ```
@@ -276,6 +293,14 @@ aws-xray-sdk
 watchtower
 blinker
 rollbar
+```
+
+## Install the dependencies by running the code below in the terminal
+```sh
+cd /workspace
+cd aws-bootcamp-cruddur-2024
+cd backend-flask
+pip install -r requirements.txt
 ```
 
 ## Save the work on its own branch named "week-1"

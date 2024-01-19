@@ -10,7 +10,7 @@ gp env HONEYCOMB_API_KEY="<your API key>"
 ```
 Then use your API Key in `backend-flask` -> `docker-compose.yml` file 
 ```yaml
-OTEL_SERVICE_NAME: 'backend-flask'
+      OTEL_SERVICE_NAME: 'backend-flask'
       OTEL_EXPORTER_OTLP_ENDPOINT: "https://api.honeycomb.io"
       OTEL_EXPORTER_OTLP_HEADERS: "x-honeycomb-team=${HONEYCOMB_API_KEY}"
 ```
@@ -26,6 +26,7 @@ Here's the `app.py` code required for Honeycomb
 
 - **To get required packages** 
 ```py
+# Honeycomb
 from opentelemetry import trace
 from opentelemetry.instrumentation.flask import FlaskInstrumentor
 from opentelemetry.instrumentation.requests import RequestsInstrumentor
@@ -35,13 +36,14 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 ```
 - **Initialize tracing and an exporter that can send data to Honeycomb**
 ```py
+# Initialize tracing and an exporter that can send data to Honeycomb
 provider = TracerProvider()
 processor = BatchSpanProcessor(OTLPSpanExporter())
 provider.add_span_processor(processor)
 trace.set_tracer_provider(provider)
 tracer = trace.get_tracer(__name__)
 ```
-- **Add the code below inside the 'app' to  Initialize automatic instrumentation with Flask**
+- **Add the code below inside the 'app' to Initialize automatic instrumentation with Flask**
 ```py
 FlaskInstrumentor().instrument_app(app)
 RequestsInstrumentor().instrument()
@@ -57,15 +59,71 @@ cors = CORS(
   methods="OPTIONS,GET,HEAD,POST"
 )
 ```
+To create span and attribute, add the following code on the home_activities.py
+```python
+from opentelemetry import trace
+tracer = trace.get_tracer("home.activities")
+```
+```python
+with tracer.start_as_current_span("home-activities-mock-data"):
+    span = trace.get_current_span()
+```
+```python
+span.set_attribute("app.now", now.isoformat())
+```
+at the end of the code, put the following
+```python
+span.set_attribute("app.result_lenght", len(results))
+```
+add this to home_activities.py
+```py
+LOGGER.info("HomeActivities")
+```
+
+And change the following code
+```py
+#def run(Logger):
+   #Logger.info("HomeActivities")
+```
 
 ## #2 AWS X-RAY
-Amazon has another service called X-RAY which is helpful in tracing requests by microservices. analyzes and debugs application running on distributed environments. First create segements and subsegments by following the instructional videos. 
+Amazon has another service called X-RAY which is helpful in tracing requests by microservices. analyzes and debugs application running on distributed environments. 
 
+check the env var for the AWS region using the following command:
+```sh
+env | grep AWS_REGION
+```
+If there is no result run:
+```sh
+export AWS_REGION="<chosen region>"
+gp env AWS_REGION="<chosen region>"
+```
 - To get your application traced in AWS X-RAY you need to install aws-xray-sdk module. You can do this by running the commands below:
 ```
 pip install aws-xray-sdk
 ```
-To add this module automatically at startup we place it in our `requirements.txt` file and install. 
+In the backend-flask requirements.text, insert the following:
+```py
+aws-xray-sdk
+```
+Additionally, to install all the dependencies via docker compose run:
+```sh
+pip install -r requirements.txt
+```
+
+Make sure to create segements and subsegments by following the instructional videos. 
+
+Insert the following code inside the app.py
+```python
+# Xray
+from aws_xray_sdk.core import xray_recorder
+from aws_xray_sdk.ext.flask.middleware import XRayMiddleware
+```
+```python
+# Xray
+xray_url = os.getenv("AWS_XRAY_URL")
+xray_recorder.configure(service='backend-flask', dynamic_naming=xray_url)
+```
 
 - Created our own Sampling Rule name 'Cruddur'. This code was written in `aws/json/xray.json` file
 ```json
@@ -92,12 +150,19 @@ aws xray create-group \
    --group-name "Cruddur" \
    --filter-expression "service(\"$FLASK_ADDRESS\")"
 ```
+<bold> or better yet run </bold>:
+```py
+aws xray create-group \
+   --group-name "Cruddur" \
+   --filter-expression "service(\"backend-flask")"
+```
 The above code is useful for setting up monitoring for a specific Flask service using AWS X-Ray. It creates a group that can be used to visualize and analyze traces for that service, helping developers identify and resolve issues more quickly.
 
 Then run this command to get the above code executed 
 ```bash
 aws xray create-sampling-rule --cli-input-json file://aws/json/xray.json
 ```
+
 - **Install Daemon Service**
 To install the  X-RAY Daemon Service for that we add the code below to `docker-compose.yml` file.
 ```yaml
@@ -117,17 +182,45 @@ Also add Environment Variables in the `docker-compose.yml` file:
    AWS_XRAY_URL: "*4567-${GITPOD_WORKSPACE_ID}.${GITPOD_WORKSPACE_CLUSTER_HOST}*"
    AWS_XRAY_DAEMON_ADDRESS: "xray-daemon:2000"
 ```
+```py
+simple_processor = SimpleSpanProcessor(ConsoleSpanExporter())
+provider.add_span_processor(simple_processor)
+```
+```python
+# xray
+XRayMiddleware(app, xray_recorder)
+```
 
 ## #3 CloudWatch
 For CLoudWatch install `watchtower` and import `watchtower`, `logging` and `strftime from time`.
-Also set env vars in backend flask in `docker-compose.yml` 
+
+In `backend-flask requirements.text`, insert the following text:
+```yaml
+watchtower
+```
+
+To install all dependencies>> <bold>`only necessary this time as it will be run automatically via docker compose`</bold>
+
+```sh
+pip install -r requirements.txt
+```
+
+Also set env vars in backend flask > `docker-compose.yml` 
 ```yaml
       AWS_DEFAULT_REGION: "${AWS_DEFAULT_REGION}"
       AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
       AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
 ```
 
-- **Configured LOGGER to use CloudWatch**
+- **Configure LOGGER to use CloudWatch**
+
+add the following code on the app.py on our backend-flask
+```python
+# Cloudwatch
+import watchtower
+import logging
+from time import strftime
+```
 ```py
 # Configuring Logger to Use CloudWatch
 LOGGER = logging.getLogger(__name__)
@@ -156,22 +249,29 @@ Rollbar is used to **track errors** and monitor applications for error, it track
 - **Then created a new Rollbar Project** : It asks you to setup your project , you get chance to select your SDK and also provides instructions on how to start. 
 - **Access token** is provided for your new Rollbar Project.
 - **Installed** `blinker` and `rollbar`.
-- Set the access token 
+  add this code to requirements.text
+      ```py
+      blinker
+      rollbar
+      ```
+- Set the access token as an env var:
 ```
-export ROLLBAR_ACCESS_TOKEN=""
-gp env ROLLBAR_ACCESS_TOKEN=""
+export ROLLBAR_ACCESS_TOKEN="<token>"
+gp env ROLLBAR_ACCESS_TOKEN="<token>"
 ```
-- **Added to backend-flask for `docker-compose.yml`**
+- **Added to backend-flask -> `docker-compose.yml`**
 ```yaml
 ROLLBAR_ACCESS_TOKEN: "${ROLLBAR_ACCESS_TOKEN}"
 ```
 - **Imported** for Rollbar
+  insert the following code in -> backend-flask/app.py
 ```py
 import rollbar
 import rollbar.contrib.flask
 from flask import got_request_exception
 ```
 ```py
+# Rollbar
 rollbar_access_token = os.getenv('ROLLBAR_ACCESS_TOKEN')
 @app.before_first_request
 def init_rollbar():
@@ -189,7 +289,7 @@ def init_rollbar():
     # send exceptions from `app` to rollbar, using flask's signal system.
     got_request_exception.connect(rollbar.contrib.flask.report_exception, app)
 ```
-- **Added an endpoint to to `app.py` to allow rollbar testing**
+- **Add an endpoint to `app.py` to allow rollbar testing:**
 ```py
 @app.route('/rollbar/test')
 def rollbar_test():
@@ -197,7 +297,7 @@ def rollbar_test():
     return "Hello World!"
 ```
 
-## [Note] Changes to Rollbar
+## [Note] Changes to Rollbar:
 
 During the original bootcamp cohort, there was a newer version of flask.
 This resulted in rollback implementation breaking due to a change is the flask api.

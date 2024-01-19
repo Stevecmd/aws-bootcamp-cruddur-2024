@@ -1,4 +1,7 @@
 # Week 1 — App Containerization
+Container repo's:
+- [DockerHub](https://hub.docker.com/)
+- [Jfrog](https://jfrog.com/) - For artifacts / images
 
 ### Add Dockerfile
 
@@ -38,17 +41,20 @@ EXPOSE ${PORT}
 
 CMD [ "python3", "-m" , "flask", "run", "--host=0.0.0.0", "--port=4567"]
 ```
+
 On the terminal run:
 ```sh
 export FRONTEND_URL="*"
 export BACKEND_URL="*"
 ```
+
 To start the container run the code below in the terminal:
 ```sh
 CMD [ "python3", "-m" , "flask", "run", "--host=0.0.0.0", "--port=4567"]
 ```
+
 Upon visiting your gitpod backend port link and appending '/api/activities/home' you should see some json output. 
-1 hr mark on week 1 video
+
 Unset the env vars below
 ```sh
 unset FRONTEND_URL
@@ -87,6 +93,10 @@ Visit the port link and make sure to append '/api/activities/home', you should g
 On gitpod open a new terminal and run the code below to see the running docker containers:
 ```sh
   docker ps
+```
+To see the images available run:
+```sh
+  docker images
 ```
 ### Delete an Image
 NB to delete an image we use the 'rm' flag to make sure the container does not simply stop and stay in a suspended
@@ -127,6 +137,7 @@ Go back a directory:
   cd ..
 ```
 You should now be in the directory: 'aws-bootcamp-cruddur-2024'
+
 ### Create a docker-compose file
 
 Create `docker-compose.yml` at the root' of your project ie within 'aws-bootcamp-cruddur-2024'. 
@@ -222,3 +233,5 @@ services:
 
 Example of using DynamoDB local
 https://github.com/100DaysOfCloud/challenge-dynamodb-local
+
+Confirmation code = 1234

@@ -3,7 +3,8 @@ Container repo's:
 - [DockerHub](https://hub.docker.com/)
 - [Jfrog](https://jfrog.com/) - For artifacts / images
 
-### Add Dockerfile
+## Containerize Backend
+### Create Docker File
 
 Create a file here: `backend-flask/Dockerfile` containing the code below:
 
@@ -493,8 +494,18 @@ To test the postgres installation run the code below:
 ```sh
 psql -Upostgres --host localhost```
 Press Enter once asked for a password or set it as 'password'
+```
 
+## Extra
 
-
+Implement a healthcheck in the Docker compose file --> 'docker-compose.yml' :
+```yaml
+    healthcheck:
+      test: curl --fail http://localhost || exit 1
+      interval: 60s
+      retries: 5
+      start_period: 20s
+      timeout: 10s
+```
 
 Hardcoded pass for users = 1234

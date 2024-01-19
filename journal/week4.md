@@ -205,18 +205,97 @@ CREATE TABLE public.activities (
 );
 ```
 
-We then made a new batch script named 'db-connect' inside the bin folder, made it executable by running 'chmod u+x ./bin/db-connect' then run the file.
-
-```
+We then made a new bash script named 'db-connect' inside the bin folder './bin/db-connect', made it executable by running 'chmod u+x ./bin/db-connect' then ran the file.
+The file contains:
+```sh
 #! /usr/bin/bash
+if [ "$1" = "prod" ]; then
+  echo "Running in production mode"
+  URL=$PROD_CONNECTION_URL
+else
+  URL=$CONNECTION_URL
+fi
 
-psql $CONNECTION_URL
+psql $URL
 ```
 
 We were able to successfully connect to our local Postgres database using this bash script. We then ran '\dt' from the Postgres database to view our tables.
 
+### `./bin/db-create` to create a new table 'cruddur'
+```
+#!  /usr/bin/bash
 
-We then created one more batch script named 'db-seed' and made it executable as well.
+CYAN='\033[1;36m'
+NO_COLOR='\033[0m'
+LABEL="db-create"
+printf "${CYAN}== ${LABEL}${NO_COLOR}\n"
+
+NO_DB_CONNECTION_URL=$(sed 's/\/cruddur//g' <<< "$CONNECTION_URL")
+psql $NO_DB_CONNECTION_URL -c "create database cruddur;"
+```
+
+### `./bin/db-drop` to delete an existing table:
+```
+#!  /usr/bin/bash
+
+CYAN='\033[1;36m'
+NO_COLOR='\033[0m'
+LABEL="db-drop"
+printf "${CYAN}== ${LABEL}${NO_COLOR}\n"
+
+NO_DB_CONNECTION_URL=$(sed 's/\/cruddur//g' <<< "$CONNECTION_URL")
+psql $NO_DB_CONNECTION_URL -c "drop database cruddur;"
+```
+
+### `./bin/db-schema-load` to load the schema:
+```
+#! /usr/bin/bash
+
+CYAN='\033[1;36m'
+NO_COLOR='\033[0m'
+LABEL="db-schema-load"
+printf "${CYAN}== ${LABEL}${NO_COLOR}\n"
+
+schema_path="$(realpath .)/db/schema.sql"
+echo $schema_path
+
+if [ "$1" = "prod" ]; then
+  echo "Running in production mode"
+  URL=$PROD_CONNECTION_URL
+else
+  URL=$CONNECTION_URL
+fi
+
+psql $URL cruddur < $schema_path
+```
+
+### `./bin/db-seed` to insert the data into schema loaded:
+```
+#! /usr/bin/bash
+
+CYAN='\033[1;36m'
+NO_COLOR='\033[0m'
+LABEL="db-seed"
+printf "${CYAN}== ${LABEL}${NO_COLOR}\n"
+
+seed_path="$(realpath .)/db/seed.sql"
+echo $seed_path
+
+if [ "$1" = "prod" ]; then
+  echo "Running in production mode"
+  URL=$PROD_CONNECTION_URL
+else
+  URL=$CONNECTION_URL
+fi
+
+psql $URL cruddur < $seed_path
+
+```
+
+And to connect to PROD environment, you can suffix the command with PROD. `./bin/db-connect prod`
+
+
+We then created one more bash script named 'db-seed' and made it executable as well.
 
 ```
 #! /usr/bin/bash
@@ -358,7 +437,7 @@ We open docker-compose.yml and add an environment variable for our CONNECTION_UR
 CONNECTION_URL: "postgresql://postgres:password@localhost:5432/cruddur"
 ```
 
-Next we open home_activities.py to import our connection pool, remove our mock data, and add our query to establish our connection. 
+Next we open **home_activities.py** to import our connection pool, remove our mock data, and add our query to establish our connection. 
 
 ```py
 from lib.db import pool, query_wrap_array
@@ -410,8 +489,19 @@ We again test the 'psql' command above, this time it works. Since our IP is goin
 
 There's several env variables we then set after this, passing our security group id and our security group rule id as variables: DB_SG_ID and DB_SG_RULE_ID
 
-
-We also store our env var in '.gitpod.yml' as well as create a new batch script named 'rds-update-sg-rule' to run every time our environment launches:
+```sh
+export DB_SG_ID="sg-12345"
+gp env DB_SG_ID="sg-12345"
+export DB_SG_RULE_ID="sgr-12345"
+gp env DB_SG_RULE_ID="sgr-12345"
+```
+Since the ip address changes everytime, you need to change the ip on the security group of the rds instance here is the script to add to the file rds-update-sg-rule under bin:
+```py
+aws ec2 modify-security-group-rules \
+    --group-id $DB_SG_ID \
+    --security-group-rules "SecurityGroupRuleId=$DB_SG_RULE_ID,SecurityGroupRule={Description=GITPOD,IpProtocol=tcp,FromPort=5432,ToPort=5432,CidrIpv4=$GITPOD_IP/32}"
+```
+We also store our env var in '.gitpod.yml' as well as create a new bash script named 'rds-update-sg-rule' to run every time our environment launches:
 
 ```yml
   - name: postgres

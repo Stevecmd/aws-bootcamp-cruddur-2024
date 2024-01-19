@@ -234,4 +234,258 @@ services:
 Example of using DynamoDB local
 https://github.com/100DaysOfCloud/challenge-dynamodb-local
 
-Confirmation code = 1234
+
+## Open-API
+
+### Document the Notification Endpoint for the OpenAPI Document, Write a Flask Backend Endpoint for Notifications, and Write a React Page for Notifications
+In this task, we created the openapi-3.0.yml file as a standard for defining APIs. The API is providing us with mock data, as there's currently no database hooked to the backend. 
+
+[Open API](https://dash.readme.com/)
+
+[Open API Initiative Registry](https://spec.openapis.org/)
+> To understand the Open Api file in: 'backend-flask/openapi-3.0.yml'; 
+  visit the link above.
+
+We added a new section to the Open Api file at line 150 directly after:
+```yml 
+  $ref: '#/components/schemas/Message'
+```
+The section to add is as below:
+
+```yml
+  /api/activities/notifications:
+    get:
+      description: 'Return a feed of activity for all of those that I follow'
+      tags:
+        - activities
+      parameters: []
+      responses:
+        '200':
+          description: Returns an array of activities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Activity'
+```
+
+To write a Flask Backend Endpoint for Notifications, we selected the 'app.py' file in 'backend-flask' and added the following to create a micro service:
+At Line 7 add:
+
+```Python
+
+from services.notifications_activities import * 
+
+```
+Define a route for the notifications endpoint in the Flask app:
+Line 68, after: 
+```python
+  @app.route("/api/activities/home"
+```
+...insert the code code below:
+
+```Python
+@app.route("/api/activities/notifications", methods=['GET'])
+def data_notifications():
+  data = NotificationsActivities.run()
+  return data, 200
+```
+In 'backend-flask/services' we defined the micro service notifications_activites.py:
+
+```Python
+from datetime import datetime, timedelta, timezone
+class NotificationsActivities:
+  def run():
+    now = datetime.now(timezone.utc).astimezone()
+    results = [{
+      'uuid': '68f126b0-1ceb-4a33-88be-d90fa7109eee',
+      'handle':  'coco',
+      'message': 'I am white unicorn',
+      'created_at': (now - timedelta(days=2)).isoformat(),
+      'expires_at': (now + timedelta(days=5)).isoformat(),
+      'likes_count': 5,
+      'replies_count': 1,
+      'reposts_count': 0,
+      'replies': [{
+        'uuid': '26e12864-1c26-5c3a-9658-97a10f8fea67',
+        'reply_to_activity_uuid': '68f126b0-1ceb-4a33-88be-d90fa7109eee',
+        'handle':  'Worf',
+        'message': 'This post has no honor!',
+        'likes_count': 0,
+        'replies_count': 0,
+        'reposts_count': 0,
+        'created_at': (now - timedelta(days=2)).isoformat()
+      }],
+    },
+    ]
+    return results
+```
+
+For the Frontend, to implement the notifications tab, we went to the frontend-react-js folder. We accessed App.js, and added something new to import at line 4:
+
+```Javascript
+import NotificationsFeedPage from './pages/NotificationsFeedPage';
+```
+
+Line 23 - Using react-router, we added a new path for the element:
+
+```Javascript
+  {
+    path: "/notifications",
+    element: <NotificationsFeedPage />
+  },
+```
+
+Then under 'frontend-react-js/src/pages', we created the pages NotificationsFeedPage.js and NotificationsFeedPage.css.
+Add the code below to 'NotificationsFeedPage.js':
+
+```Javascript
+import './NotificationsFeedPage.css';
+import React from "react";
+
+import DesktopNavigation  from '../components/DesktopNavigation';
+import DesktopSidebar     from '../components/DesktopSidebar';
+import ActivityFeed from '../components/ActivityFeed';
+import ActivityForm from '../components/ActivityForm';
+import ReplyForm from '../components/ReplyForm';
+
+// [TODO] Authenication
+import Cookies from 'js-cookie'
+
+export default function NotificationsFeedPage() {
+  const [activities, setActivities] = React.useState([]);
+  const [popped, setPopped] = React.useState(false);
+  const [poppedReply, setPoppedReply] = React.useState(false);
+  const [replyActivity, setReplyActivity] = React.useState({});
+  const [user, setUser] = React.useState(null);
+  const dataFetchedRef = React.useRef(false);
+
+  const loadData = async () => {
+    try {
+      const backend_url = `${process.env.REACT_APP_BACKEND_URL}/api/activities/notifications`
+      const res = await fetch(backend_url, {
+        method: "GET"
+      });
+      let resJson = await res.json();
+      if (res.status === 200) {
+        setActivities(resJson)
+      } else {
+        console.log(res)
+      }
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  const checkAuth = async () => {
+    console.log('checkAuth')
+    // [TODO] Authenication
+    if (Cookies.get('user.logged_in')) {
+      setUser({
+        display_name: Cookies.get('user.name'),
+        handle: Cookies.get('user.username')
+      })
+    }
+  };
+
+  React.useEffect(()=>{
+    //prevents double call
+    if (dataFetchedRef.current) return;
+    dataFetchedRef.current = true;
+
+    loadData();
+    checkAuth();
+  }, [])
+
+  return (
+    <article>
+      <DesktopNavigation user={user} active={'notifications'} setPopped={setPopped} />
+      <div className='content'>
+        <ActivityForm  
+          popped={popped}
+          setPopped={setPopped} 
+          setActivities={setActivities} 
+        />
+        <ReplyForm 
+          activity={replyActivity} 
+          popped={poppedReply} 
+          setPopped={setPoppedReply} 
+          setActivities={setActivities} 
+          activities={activities} 
+        />
+        <ActivityFeed 
+          title="Notifications" 
+          setReplyActivity={setReplyActivity} 
+          setPopped={setPoppedReply} 
+          activities={activities} 
+        />
+      </div>
+      <DesktopSidebar user={user} />
+    </article>
+  );
+}
+```
+
+
+Then at the bottom of the docker-compose.yml file, we added the rest of the Postgress code for the volumes:
+
+```yml
+volumes:
+  db:
+    driver: local
+```
+
+
+
+To test your local DynamoDB orchestration run:
+## Run Docker Local
+
+```
+docker-compose up
+```
+
+## Create a table
+
+```sh
+aws dynamodb create-table \
+    --endpoint-url http://localhost:8000 \
+    --table-name Music \
+    --attribute-definitions \
+        AttributeName=Artist,AttributeType=S \
+        AttributeName=SongTitle,AttributeType=S \
+    --key-schema AttributeName=Artist,KeyType=HASH AttributeName=SongTitle,KeyType=RANGE \
+    --provisioned-throughput ReadCapacityUnits=1,WriteCapacityUnits=1 \
+    --table-class STANDARD
+```
+
+## Create an Item
+
+```sh
+aws dynamodb put-item \
+    --endpoint-url http://localhost:8000 \
+    --table-name Music \
+    --item \
+        '{"Artist": {"S": "No One You Know"}, "SongTitle": {"S": "Call Me Today"}, "AlbumTitle": {"S": "Somewhat Famous"}}' \
+    --return-consumed-capacity TOTAL  
+```
+
+## List Tables
+
+```sh
+aws dynamodb list-tables --endpoint-url http://localhost:8000
+```
+
+## Get Records
+
+```sh
+aws dynamodb scan --table-name Music --query "Items" --endpoint-url http://localhost:8000
+````
+
+
+
+
+
+
+
+Hardcoded pass for users = 1234

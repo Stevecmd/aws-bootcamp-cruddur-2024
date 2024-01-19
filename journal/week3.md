@@ -15,19 +15,20 @@ In this live session, we first created a UserPool in AWS Cognito.
 - Under Required attributes -> I selected **Name** and **preferred username** -> **Next**
 - Then I chose **Send email with Cognito** for first time -> **Next**
 - After that you will be asked to give your User Pool Name , I gave it as **crddur-user-pool** -> under Initial app client I kept it as **Public client** -> enter app client name **(eg: cruddur)** -> **Next**
-- You will get a chance to verify all the filled details and then click on **Create User Pool**, your usepool is being created.
+- You will get a chance to verify all the filled details and then click on **Create User Pool**, your userpool is being created.
 
 ## Gitpod Code Working 
-I installed AWS Amplify as it is development platform and provides you set of pre-built UI components and Libraries. 
+Install AWS Amplify as it is a development platform and provides you a set of pre-built UI components and Libraries. 
 ```
+cd front-react-js 
 npm i aws-amplify --save
 ```
-After installing this I found `"aws-amplify": "^5.0.16",` in my frontend-react-js directory's `package.json` file.
+After installing this you will find the library `"aws-amplify": "<version>",` in the frontend-react-js directory's `package.json` file.
 
 **Note: make sure you are running these commands in your `frontend-react-js` directory.**
 
 ### Configure Amplify
-I added this code in `app.js` of frontend-react-js directory.
+Add the code below in `app.js` of frontend-react-js directory.
 ```js
 import { Amplify } from 'aws-amplify';
 
@@ -48,14 +49,14 @@ Amplify.configure({
 });
 ```
 
-In the above code set these below env vars in `docker-compose.yml`.
-```js
-REACT_APP_AWS_PROJECT_REGION= ""
-REACT_APP_AWS_COGNITO_IDENTITY_POOL_ID= ""
-REACT_APP_AWS_COGNITO_REGION= ""
-REACT_APP_AWS_USER_POOLS_ID= ""
-REACT_APP_CLIENT_ID= ""
+Set the env vars below in docker-compose.yml:
+```py
+REACT_APP_AWS_PROJECT_REGION= "${AWS_DEFAULT_REGION}"
+REACT_APP_AWS_COGNITO_REGION= "${AWS_DEFAULT_REGION}"
+REACT_APP_AWS_USER_POOLS_ID= "us-east-1_XXXXXX"
+REACT_APP_CLIENT_ID= "XXXXXX"
 ```
+
 ### Then to check the **Authentication Process** I added this code in my `HomeFeedPage.js`
 ```js
 import { Auth } from 'aws-amplify';

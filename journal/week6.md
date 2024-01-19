@@ -1,78 +1,5 @@
 # Week 6 — Deploying Containers and DNS
-
-# Security in ECS/EKS/FARGATE
-
-Before speaking of security, let's dive a little bit into the type of Container Services in AWS.
-
-- Deploying the container inside the EC2 (Virtual Machine)
-- Deploying using AWS services such as ECS, Fargate or EKS
-
-
-Security Challenges with Fargate:
-- No visibility of infrastructure as this is managed by the cloud providerEphemeral Resources make it hard to triage or Forensics for detected threats
-- No file/network monitoring
-- Cannot run traditional security agents in fargate
-- Users can run the unverified container image
-- The container can run as root and even with elevated privileges.
-
-
-Amazon ECS Side- Security Best Practice
-- Cloud Control Plane Configuration (who has access, who can create images, who can create containers, what is the lifecycle of the images)
--  Choosing between public or private images repositories (ECR).
-- Amazon ECR scan Images to "Scan on push" using Basic or Enhanced (Inspector + Snyk)
-- Use VPC Endpoint or Security Group with known source only
-- Compliance standard is what your business requires
-- Amazon Organization CSP (Manage ECS Task Deletion, ECS Creation, Region Lock, etc) [Ashish Policies template](https://github.com/hashishrajan/aws-scp-best-practice-policies)
-- AWS Cloudtrail to audit activities and discover malicious ECS behaviour by an identity in AWS.
-- AWS Config Rule is enabled in the account and region of ECS.
-
-Application Side- Security Best Practice
-- Access Control - Role or IAM users for ECS Clusters/Services/Task
-- Most Recent Version of ECS agent Daemon on EC2.
-- Container Control Plane Configuration - Root Privileges, resource limitations etc.
-- No secret/ Passwords in ECS task definition (For security purposes user/password to access DB must be done using the secret manager)
-- Only use trusted containers from ecr with no high/critical vulnerabilities
-- Limit ability to SSH into EC2 container to read only file system - use API or GitOps to put information for troubleshooting.
-- Amazon Cloudwatc to monitor Malicious ECS Configuration Changes.
-- Only using Authorized Container Images 
-
-# Security of website using route 53
-
-Let's understand what is the website: it is an application exposed using a custom domain. (An example is www.facebook.com) 
-
-AWS Security Best Practice (Route 53)
-- Integration With Amazon Certificate Manager for TLS
-- Compliance Standard is what your business requires for a DNS provider
-- Amazon Organization SCP - To manage route 53 actions like creation, deletion, modification of production URIs etc.
-- AWS CloudTrail is enabled & monitored to trigger alerts for malicious activities e.g Associate VPC with hosted zone, change resource record set, register domain etc.
-- Guardduty is enabled for monitoring suspicious DNS comms (e.g Crypto-mining etc) and automated for auto-remediation.
-- AWS Config Rules is enabled in the account and region of ECS
-
-Security Best Practice - Application (Route53)
-- Access Control - Role or IAM users for making DNS changes in Amazon Route53
-- Public vs Private Hosted Zone
-- All route 53 records should point to an existing DNS, ELB, ALB or AWS S3
-- Hosted Zone Configuration Changes Limited to a small set of people.
-- Enable Encryption in Transit using TLS/SSL certification
-- Only use trusted domain providers for requesting new DNSs
-- Set TTL appropriately to afford to wait for a change to take effect
-- Ensure Root Domain Alias Record point to ELB
--Develop process for continuously verifying  if DNS (& Hosted Zone) are al current and valid
-
-
-# Cost
-
-This Week Cirag did not post any video about cost so I did some research.
-
-Fargate: There is no free tier for this service. The cost is payg and no upfront cost. Please refer the aws calculator for [fargate](https://calculator.aws/#/addService/Fargate)
-
-ELB: If it is your new account, AWS offers a free tier for 12 months for this service. you receive a 750 hours per month shared between classic load balancer and application load balancer. 15 Gb of data processing for classic load balancer and 15 LCU for application Load balancer
-
-AWS Certificate Manager: Public SSL/TLS certificates provisioned through AWS Certificate Manager are free.
-
-
-
-# Implementation
+## Implementation
 
 this is week we start to implementation on AWS ecs with fargate
 
@@ -102,9 +29,9 @@ finally:
   conn.close()
 
 ```
-change the chmod u+x
+change the file permissions using: chmod u+x backend-flask/bin/db/test
 
-The next steps is to create a health check of our backend-flask container
+The next step is to create a health check of our backend-flask container
 add the following code inside the app.py and remove the rollbar test
 
 ```
@@ -115,7 +42,7 @@ def health_check():
 
 
 
-We'll create a new bin script on bin/flask/health-check
+We'll create a new biash script on bin/flask/health-check
 
 ```
 #!/usr/bin/env python3
@@ -141,10 +68,9 @@ change the chmod u+x
 
 The next step is to create the cloudwatch log group. use the following command using the terminal
 ```
-aws logs create-log-group --log-group-name "/cruddur/fargate-cluster"
-aws logs put-retention-policy --log-group-name "/cruddur/fargate-cluster" --retention-in-days 1
+aws logs create-log-group --log-group-name cruddur
+aws logs put-retention-policy --log-group-name cruddur --retention-in-days 1
 ```
-
 
 The next step is to create the container registry the images
 
@@ -157,7 +83,7 @@ aws ecs create-cluster \
 ```
 
 the next steps is to prepare our docker.
-first we need to create 3 repo in ERC. 1st for Python, 2nd for backend-flask and 3rd for frontend-react-js
+first we need to create 3 repo in ECR. 1st for Python, 2nd for backend-flask and 3rd for frontend-react-js
 
 First we need to login to ECR using the following command (Note this has to be done everytime you need to connect to ECR)
 ```
@@ -186,7 +112,7 @@ docker tag python:3.10-slim-buster $ECR_PYTHON_URL:3.10-slim-buster
 docker push $ECR_PYTHON_URL:3.10-slim-buster
 ```
 
-from the dockerfile of backend-fask change the following line
+from the dockerfile of backend-fask change the following line:
 ```
 FROM python:3.10-slim-buster
 
@@ -194,7 +120,7 @@ ENV FLASK_ENV=development
 ````
 with
 ```
-FROM 238967891447.dkr.ecr.eu-west-2.amazonaws.com/cruddur-python
+FROM <repo-code>.dkr.ecr.us-east-1.amazonaws.com/cruddur-python
 
 ENV FLASK_DEBUG=1
 ```
@@ -208,15 +134,14 @@ the command to compose using the cli is the following
 docker compose up backend-flask db
 ```
 
-next is to create the repo for the backend flask
-using the cli, launch this code
+next is to create the repo for the backend flask:
 ```
 aws ecr create-repository \
   --repository-name backend-flask \
   --image-tag-mutability MUTABLE
 ```
 
-and use the following command using the cli to set the url of the repo created before
+and use the following command using the cli to set the url of the repo created before:
 ```
 export ECR_BACKEND_FLASK_URL="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/backend-flask"
 echo $ECR_BACKEND_FLASK_URL
@@ -227,7 +152,7 @@ now it is time to build the backend-flask image(make sure you are inside the dir
 docker build -t backend-flask .
 ```
 
-and then tag it
+Tag the image
 ```
 docker tag backend-flask:latest $ECR_BACKEND_FLASK_URL:latest
 ```
@@ -292,7 +217,7 @@ Create another json file under this path aws/policies/service-execution-policy.j
                 "ssm:GetParameters",
                 "ssm:GetParameter"
             ],
-            "Resource": "arn:aws:ssm:eu-west-2:238967891447:parameter/cruddur/backend-flask/*"
+            "Resource": "arn:aws:ssm:us-east-1:<account-number>:parameter/cruddur/backend-flask/*"
         }
     ]
 }
@@ -372,7 +297,7 @@ create a new file /aws/task-definitions/backend-flask.json
 ```
 {
   "family": "backend-flask",
-  "executionRoleArn": "arn:aws:iam::238967891447:role/CruddurServiceExecutionRole",
+  "executionRoleArn": "arn:aws:iam::<account-number>:role/CruddurServiceExecutionRole",
   "taskRoleArn": "",
   "networkMode": "awsvpc",
   "cpu": "256",
@@ -383,7 +308,7 @@ create a new file /aws/task-definitions/backend-flask.json
   "containerDefinitions": [
     {
       "name": "backend-flask",
-      "image": "238967891447.dkr.ecr.eu-west-2.amazonaws.com/backend-flask",
+      "image": "<account-number>.dkr.ecr.us-east-1.amazonaws.com/backend-flask",
       "essential": true,
       "healthCheck": {
         "command": [
@@ -407,25 +332,25 @@ create a new file /aws/task-definitions/backend-flask.json
         "logDriver": "awslogs",
         "options": {
             "awslogs-group": "cruddur",
-            "awslogs-region": "eu-west-2",
+            "awslogs-region": "us-east-1",
             "awslogs-stream-prefix": "backend-flask"
         }
       },
       "environment": [
         {"name": "OTEL_SERVICE_NAME", "value": "backend-flask"},
         {"name": "OTEL_EXPORTER_OTLP_ENDPOINT", "value": "https://api.honeycomb.io"},
-        {"name": "AWS_COGNITO_USER_POOL_ID", "value": "eu-west-2_rNUe2sEXo"},
+        {"name": "AWS_COGNITO_USER_POOL_ID", "value": "us-east-1_rNUe2sEXo"},
         {"name": "AWS_COGNITO_USER_POOL_CLIENT_ID", "value": "3870k3kbsr6tbkj6bltab924bp"},
         {"name": "FRONTEND_URL", "value": "*"},
         {"name": "BACKEND_URL", "value": "*"},
-        {"name": "AWS_DEFAULT_REGION", "value": "eu-west-2"}
+        {"name": "AWS_DEFAULT_REGION", "value": "us-east-1"}
       ],
       "secrets": [
-        {"name": "AWS_ACCESS_KEY_ID"    , "valueFrom": "arn:aws:ssm:eu-west-2:238967891447:parameter/cruddur/backend-flask/AWS_ACCESS_KEY_ID"},
-        {"name": "AWS_SECRET_ACCESS_KEY", "valueFrom": "arn:aws:ssm:eu-west-2:238967891447:parameter/cruddur/backend-flask/AWS_SECRET_ACCESS_KEY"},
-        {"name": "CONNECTION_URL"       , "valueFrom": "arn:aws:ssm:eu-west-2:238967891447:parameter/cruddur/backend-flask/CONNECTION_URL" },
-        {"name": "ROLLBAR_ACCESS_TOKEN" , "valueFrom": "arn:aws:ssm:eu-west-2:238967891447:parameter/cruddur/backend-flask/ROLLBAR_ACCESS_TOKEN" },
-        {"name": "OTEL_EXPORTER_OTLP_HEADERS" , "valueFrom": "arn:aws:ssm:eu-west-2:238967891447:parameter/cruddur/backend-flask/OTEL_EXPORTER_OTLP_HEADERS" }
+        {"name": "AWS_ACCESS_KEY_ID"    , "valueFrom": "arn:aws:ssm:us-east-1:<account-number>:parameter/cruddur/backend-flask/AWS_ACCESS_KEY_ID"},
+        {"name": "AWS_SECRET_ACCESS_KEY", "valueFrom": "arn:aws:ssm:us-east-1:<account-number>:parameter/cruddur/backend-flask/AWS_SECRET_ACCESS_KEY"},
+        {"name": "CONNECTION_URL"       , "valueFrom": "arn:aws:ssm:us-east-1:<account-number>:parameter/cruddur/backend-flask/CONNECTION_URL" },
+        {"name": "ROLLBAR_ACCESS_TOKEN" , "valueFrom": "arn:aws:ssm:us-east-1:<account-number>:parameter/cruddur/backend-flask/ROLLBAR_ACCESS_TOKEN" },
+        {"name": "OTEL_EXPORTER_OTLP_HEADERS" , "valueFrom": "arn:aws:ssm:us-east-1:<account-number>:parameter/cruddur/backend-flask/OTEL_EXPORTER_OTLP_HEADERS" }
       ]
     }
   ]
@@ -536,12 +461,12 @@ session-manager-plugin
 
 ```
 
-connect to the command
+connect to the command:
 ```
 aws ecs execute-command  \
     --region $AWS_DEFAULT_REGION \
     --cluster cruddur \
-    --task TOCHANGED \
+    --task TOBECHANGED \
     --container backend-flask \
     --command "/bin/bash" \
     --interactive
@@ -607,13 +532,14 @@ on the targetGroupArn insert the arn ot the target group in this case the target
 on containername backend-flask
 on containport 4567
 
+For the **Frontend** repo:
 We create the task for the frontend-react-js.
 
-first crete the task definitiion called frontend-react-js.json under /aws/task-definition
+First create the task definitiion called frontend-react-js.json under /aws/task-definition
 ```sh
 "family": "frontend-react-js",
-    "executionRoleArn": "arn:aws:iam::238967891447:role/CruddurServiceExecutionRole",
-    "taskRoleArn": "arn:aws:iam::238967891447:role/CruddurTaskRole",
+    "executionRoleArn": "arn:aws:iam::<account-number>:role/CruddurServiceExecutionRole",
+    "taskRoleArn": "arn:aws:iam::<account-number>:role/CruddurTaskRole",
     "networkMode": "awsvpc",
     "cpu": "256",
     "memory": "512",
@@ -638,7 +564,7 @@ first crete the task definitiion called frontend-react-js.json under /aws/task-d
           "logDriver": "awslogs",
           "options": {
               "awslogs-group": "cruddur",
-              "awslogs-region": "eu-west-2",
+              "awslogs-region": "us-east-1",
               "awslogs-stream-prefix": "frontend-react-js"
           }
         }
@@ -740,7 +666,7 @@ http {
 
 ```
 
-from the folder frontend-react-js run the command to build
+from the folder frontend-react-js run the command to build:
 
 ```
 npm run build
@@ -764,7 +690,7 @@ docker build \
 To point to the url of the load balancer
 ```
 docker build \
---build-arg REACT_APP_BACKEND_URL="http://cruddur-alb-1044769460.eu-west-2.elb.amazonaws.com:4567" \
+--build-arg REACT_APP_BACKEND_URL="http://cruddur-alb-1044769460.us-east-1.elb.amazonaws.com:4567" \
 --build-arg REACT_APP_AWS_PROJECT_REGION="$AWS_DEFAULT_REGION" \
 --build-arg REACT_APP_AWS_COGNITO_REGION="$AWS_DEFAULT_REGION" \
 --build-arg REACT_APP_AWS_USER_POOLS_ID="$AWS_USER_POOLS_ID" \
@@ -805,7 +731,7 @@ docker push $ECR_FRONTEND_REACT_URL:latest
 ```
 
 
-Before pushing, test locallu
+Before pushing, test locally
 ```
 docker run --rm -p 3000:3000 -it frontend-react-js 
 
@@ -816,8 +742,8 @@ create the the task definition for the frontend-react-js
 ```
 {
     "family": "frontend-react-js",
-    "executionRoleArn": "arn:aws:iam::238967891447:role/CruddurServiceExecutionRole",
-    "taskRoleArn": "arn:aws:iam::238967891447:role/CruddurTaskRole",
+    "executionRoleArn": "arn:aws:iam::<account-number>:role/CruddurServiceExecutionRole",
+    "taskRoleArn": "arn:aws:iam::<account-number>:role/CruddurTaskRole",
     "networkMode": "awsvpc",
     "cpu": "256",
     "memory": "512",
@@ -827,7 +753,7 @@ create the the task definition for the frontend-react-js
     "containerDefinitions": [
       {
         "name": "frontend-react-js",
-        "image": "238967891447.dkr.ecr.eu-west-2.amazonaws.com/frontend-react-jss",
+        "image": "<account-number>.dkr.ecr.us-east-1.amazonaws.com/frontend-react-jss",
         "essential": true,
         "portMappings": [
           {
@@ -842,7 +768,7 @@ create the the task definition for the frontend-react-js
           "logDriver": "awslogs",
           "options": {
               "awslogs-group": "cruddur",
-              "awslogs-region": "eu-west-2",
+              "awslogs-region": "us-east-1",
               "awslogs-stream-prefix": "frontend-react-js"
           }
         }
@@ -861,7 +787,7 @@ and the service-front-react-js.json
     "enableExecuteCommand": true,
     "loadBalancers": [
       {
-          "targetGroupArn": "arn:aws:elasticloadbalancing:eu-west-2:238967891447:targetgroup/cruddur-frontend-react-js/de92d78abee2a37a",
+          "targetGroupArn": "arn:aws:elasticloadbalancing:us-east-1:<account-number>:targetgroup/cruddur-frontend-react-js/de92d78abee2a37a",
           "containerName": "frontend-react-js",
           "containerPort": 3000
       }
@@ -905,7 +831,7 @@ and the service-front-react-js.json
     "enableExecuteCommand": true,
     "loadBalancers": [
       {
-          "targetGroupArn": "arn:aws:elasticloadbalancing:eu-west-2:238967891447:targetgroup/cruddur-frontend-react-js/de92d78abee2a37a",
+          "targetGroupArn": "arn:aws:elasticloadbalancing:us-east-1:<account-number>:targetgroup/cruddur-frontend-react-js/de92d78abee2a37a",
           "containerName": "frontend-react-js",
           "containerPort": 3000
       }
@@ -1044,7 +970,7 @@ In this part of implementation, we need to create 2 docker file.
 
 one called Dockerfile with the following code which has the debug on
 ```sh
-FROM 238967891447.dkr.ecr.eu-west-2.amazonaws.com/cruddur-python:3.10-slim-buster
+FROM <account-number>.dkr.ecr.us-east-1.amazonaws.com/cruddur-python:3.10-slim-buster
 
 WORKDIR /backend-flask
 
@@ -1062,7 +988,7 @@ CMD [ "python3", "-m" , "flask", "run", "--host=0.0.0.0", "--port=4567", "--debu
 the other file called Dockerfile.prod with the following code which does not have the debug, the debugger and the reload active.
 
 ```sh
-FROM 238967891447.dkr.ecr.eu-west-2.amazonaws.com/cruddur-python:3.10-slim-buster
+FROM <account-number>.dkr.ecr.us-east-1.amazonaws.com/cruddur-python:3.10-slim-buster
 
 WORKDIR /backend-flask
 

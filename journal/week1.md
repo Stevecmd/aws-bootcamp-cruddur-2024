@@ -483,7 +483,16 @@ aws dynamodb scan --table-name Music --query "Items" --endpoint-url http://local
 ````
 
 
+To add Postgres as a dependency that installs on startup, add the code below in the '.gitpod.yml' file:
+Place it under the vs-code extensions
+```yml
+    - cweijan.vscode-postgresql-client2
+```
 
+To test the postgres installation run the code below:
+```sh
+psql -Upostgres --host localhost```
+Press Enter once asked for a password or set it as 'password'
 
 
 

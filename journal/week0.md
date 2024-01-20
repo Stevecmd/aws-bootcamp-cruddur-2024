@@ -117,8 +117,34 @@ Turn on Billing Alerts to recieve alerts...
 <hr/>
 
 ## Creating a Billing Alarm via CLI
+- Supply your AWS Account ID:
+  ```sh
+  ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+  ```
 
-### Create SNS Topic
+- Confirm that your AWS Account ID is valid:
+  ```sh
+  aws sts get-caller-identity --query Account --output text
+  ```
+
+- Make your AWS Account ID an env var:
+  ```sh
+  export ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+  ```
+
+- Confirm your AWS Account ID env var has been saved:
+  ```
+  env | grep AWS_ACCOUNT_ID
+  ```
+  
+- Export your account ID as a gitpod variable: 
+  ```
+  export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+
+  gp env AWS_ACCOUNT_ID="<insert account id>"
+   ```
+
+### Create SNS (Subscriber Notification Service) Topic
 
 - We need an SNS topic before we create an alarm.
 - The SNS topic is what will delivery us an alert when we get overbilled
@@ -130,10 +156,10 @@ aws sns create-topic --name billing-alarm
 ```
 This will return a TopicARN
 
-We'll create a subscription by supplying the TopicARN and our Email
+We'll create a subscription by supplying the TopicARN gotten from the above command and our Email:
 ```sh
 aws sns subscribe \
-    --topic-arn= <TopicARN> \
+    --topic-arn="<TopicARN>" \
     --protocol= email \
     --notification-endpoint <your@email.com>
 ```
@@ -146,31 +172,16 @@ Check your email and confirm the subscription
 
 [aws budgets create-budget](https://docs.aws.amazon.com/cli/latest/reference/budgets/create-budget.html)
 
-Get your AWS Account ID
-```sh
-aws sts get-caller-identity --query Account --output text
-```
-
-- Supply your AWS Account ID
+- Create a folder at the top level named aws if it is not already there, in it create a folder named json: 
   ```
-  ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-  ```
-
-- Make your AWS Account ID an env var
-  ```
-  export ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-  ```
-
-- Confirm your AWS Account ID env var has been saved
-  ```
-  env | grep AWS_ACCOUNT_ID
-  ```
-- Export your account ID as a gitpod variable 
-  ```
-  export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-
-  gp env AWS_ACCOUNT_ID="<insert account id>"
+  cd aws-bootcamp-cruddur-2024
+  mkdir aws
+  cd aws
+  mkdir json
+  cd json
    ```
+
+  
 - Update the json files in aws/json :
 Create a file named 'budget.json' and insert the code below:
 ```sh
@@ -246,7 +257,7 @@ aws budgets create-budget \
 - We need to update the configuration json script with the TopicARN we generated earlier
 - We are just a json file because --metrics is is required for expressions and so its easier to us a JSON file.
 
-Create the file json/alarm-config.json and insert the following code and also edit the ACCOUNT_ID to match your aws account id:
+Create the file aws/json/alarm-config.json and insert the following code and also edit the ACCOUNT_ID to match your aws account id:
 ```sh
 {
     "AlarmName": "DailyEstimatedCharges",
@@ -284,16 +295,18 @@ Create the file json/alarm-config.json and insert the following code and also ed
     }]
   }
 ```
-Deploy the creation of the alarm:
+Deploy the creation of the alarm by running the code below:
 ```sh
 aws cloudwatch put-metric-alarm --cli-input-json file://aws/json/alarm-config.json
 ```
 <hr/>
 
 ## Add the Backend dependencies to the requirements file
+File location:
 ```sh
 backend-flask/requirements.txt
 ```
+Dependencies to be added:
 ```
 flask
 flask-cors

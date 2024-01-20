@@ -375,7 +375,7 @@ git push origin main
 If you want to keep the "week-1" branch for future reference or additional work, 
 you can keep it as is. If you no longer need the branch, you can delete it after merging.
 ```sh
-git branch -d week-1  # Deletes the local branch
-git push origin --delete week-1  # Deletes the remote branch
+git branch -d week-0  # Deletes the local branch
+git push origin --delete week-0  # Deletes the remote branch
 ```
 

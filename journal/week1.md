@@ -49,14 +49,7 @@ export FRONTEND_URL="*"
 export BACKEND_URL="*"
 ```
 
-To start the container run the code below in the terminal:
-```sh
-CMD [ "python3", "-m" , "flask", "run", "--host=0.0.0.0", "--port=4567"]
-```
-
-Upon visiting your gitpod backend port link and appending '/api/activities/home' you should see some json output. 
-
-Unset the env vars below
+<bold>NB:</bold>To unset the env vars run the code below:
 ```sh
 unset FRONTEND_URL
 unset BACKEND_URL
@@ -66,7 +59,10 @@ Confirm that they are unset:
 env | grep FRONTEND_URL
 env | grep BACKEND_URL
 ```
-cd into the project directory 'aws-bootcamp-cruddur- 2024'
+cd into the project directory 'aws-bootcamp-cruddur-2024':
+```sh
+  cd aws-bootcamp-cruddur-2024
+```
 
 ### Build Container
 
@@ -74,11 +70,12 @@ cd into the project directory 'aws-bootcamp-cruddur- 2024'
 docker build -t  backend-flask ./backend-flask
 ```
 
-* Make sure that the image builds succesfully
+* Make sure that the image builds succesfully then run it:
 
 ```sh
 docker run --rm -p 4567:4567 -it -e FRONTEND_URL='*' -e BACKEND_URL='*' backend-flask
 ```
+If the command runs successfully, exit the server by pressing 'Ctrl+C':
 On the terminal set the env vars:
 ```sh
 set FRONTEND_URL="*"
@@ -89,7 +86,9 @@ Run the container
 ```sh
 docker run --rm -p 4567:4567 -it -e FRONTEND_URL='*' -e BACKEND_URL='*' -d backend-flask
 ```
-Visit the port link and make sure to append '/api/activities/home', you should get Javascript response.
+The command above upon running succesfully will output your container number.
+
+Visit the port link in a new Tab and make sure to append '/api/activities/home' to the URL, you should get Javascript response.
 
 On gitpod open a new terminal and run the code below to see the running docker containers:
 ```sh
@@ -175,16 +174,17 @@ networks:
 Once done run docker compose up on the file docker-compose.yml to validate the file and see whether it runs.
 Unlock port 3000 and 4567 and ensure they are in a running state.
 Port 3000 should link to the running Cruddur website.
-If the website does not have some mockposts or any other error, check the website logs to endure there are no errors such as 'CORS'
+If the website does not have some mockposts or any other error, check the website logs to ensure there are no errors such as 'CORS'
 
 ## Adding DynamoDB Local and Postgres
 
 We are going to use Postgres and DynamoDB local in future labs
-We can bring them in as containers and reference them externally
+We can bring them in as containers and reference them externally.
 
 Lets integrate the following into our existing docker compose file:
 
 ### Postgres
+Add postgres as a service to the docker-compose.yml file after frontend-react-js:
 
 ```yaml
 services:
@@ -203,7 +203,7 @@ volumes:
     driver: local
 ```
 
-To install the postgres client into Gitpod
+To install the postgres client into Gitpod, add the code below to the gitpod.yml file:
 
 ```sh
   - name: postgres

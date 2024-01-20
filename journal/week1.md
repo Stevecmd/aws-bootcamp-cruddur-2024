@@ -215,7 +215,7 @@ To install the postgres client into Gitpod, add the code below to the gitpod.yml
 ```
 
 ### DynamoDB Local
-
+Add DynamoDB as a service to the docker-compose.yml file after postgres:
 ```yaml
 services:
   dynamodb-local:
@@ -323,7 +323,7 @@ class NotificationsActivities:
     return results
 ```
 
-For the Frontend, to implement the notifications tab, we went to the frontend-react-js folder. We accessed App.js, and added something new to import at line 4:
+For the Frontend, to implement the notifications tab, we went to the frontend-react-js folder>src. We accessed App.js, and added something new to import at line 4:
 
 ```Javascript
 import NotificationsFeedPage from './pages/NotificationsFeedPage';
@@ -481,18 +481,18 @@ aws dynamodb list-tables --endpoint-url http://localhost:8000
 
 ```sh
 aws dynamodb scan --table-name Music --query "Items" --endpoint-url http://localhost:8000
-````
+```
 
 
 To add Postgres as a dependency that installs on startup, add the code below in the '.gitpod.yml' file:
-Place it under the vs-code extensions
+Place it under the vs-code extensions,
 ```yml
-    - cweijan.vscode-postgresql-client2
+    - cweijan.vscode-mysql-client2
 ```
 
 To test the postgres installation run the code below:
 ```sh
-psql -Upostgres --host localhost```
+psql -Upostgres --host localhost
 Press Enter once asked for a password or set it as 'password'
 ```
 

@@ -307,7 +307,7 @@ File location:
 backend-flask/requirements.txt
 ```
 Dependencies to be added:
-```
+```txt
 flask
 flask-cors
 opentelemetry-api 
@@ -324,6 +324,7 @@ rollbar
 
 ## Save the work on its own branch named "week-0"
 ```sh
+cd aws-bootcamp-cruddur-2024
 git checkout -b week-0
 ```
 <hr/>

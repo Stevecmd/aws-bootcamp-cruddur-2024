@@ -12,9 +12,15 @@ export HONEYCOMB_API_KEY="<your API key>"
 
 Confirm the env vars have been set:
 ```sh
-      env grep | HONEY
+      env | grep HONEY
 ```
-Then use your API Key in `backend-flask` -> `docker-compose.yml` file 
+Then use your API Key in `backend-flask` -> `docker-compose.yml` file >   
+under
+'backend-flask:
+    environment:' 
+
+add the code below:
+
 ```yaml
       OTEL_SERVICE_NAME: 'backend-flask'
       OTEL_EXPORTER_OTLP_ENDPOINT: "https://api.honeycomb.io"

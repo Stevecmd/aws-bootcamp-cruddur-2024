@@ -101,13 +101,16 @@ tracer = trace.get_tracer("home.activities")
 with tracer.start_as_current_span("home-activities-mock-data"):
     span = trace.get_current_span()
 ```
-```python
-span.set_attribute("app.now", now.isoformat())
-```
 at the end of the code, put the following
 ```python
 span.set_attribute("app.result_lenght", len(results))
 ```
+
+An idea for an additional span would be:
+```python
+span.set_attribute("app.now", now.isoformat())
+```
+
 add this to home_activities.py
 ```py
 LOGGER.info("HomeActivities")
@@ -133,6 +136,12 @@ ports:
     port: 2000
     visibility: public
 ```
+
+For a full walkthrough on how to add Honeycomb check out the docs at:
+```html
+https://docs.honeycomb.io/getting-data-in/opentelemetry/python-distro/
+```
+Specifically look at **trace**, **span** and **Adding attributes to spans**.
 
 ## #2 AWS X-RAY
 Amazon has another service called X-RAY which is helpful in tracing requests by microservices. analyzes and debugs application running on distributed environments. 
@@ -230,10 +239,7 @@ Also add Environment Variables in the `docker-compose.yml` file:
    AWS_XRAY_URL: "*4567-${GITPOD_WORKSPACE_ID}.${GITPOD_WORKSPACE_CLUSTER_HOST}*"
    AWS_XRAY_DAEMON_ADDRESS: "xray-daemon:2000"
 ```
-```py
-simple_processor = SimpleSpanProcessor(ConsoleSpanExporter())
-provider.add_span_processor(simple_processor)
-```
+
 ```python
 # xray
 XRayMiddleware(app, xray_recorder)
@@ -359,8 +365,11 @@ https://github.com/omenking/aws-bootcamp-cruddur-2023/blob/week-x/backend-flask/
 
 To view the endpoints visit ports:
 Frontend - port 3000
-> Backend - port 4567,
-The link will be similar to: 'https://4567-stevecmd-awsbootcampcru-c7fjn6b3pzb.ws-eu107.gitpod.io/api/activities/home' to see Home.
-or 'https://4567-stevecmd-awsbootcampcru-c7fjn6b3pzb.ws-eu107.gitpod.io/api/activities/notifications' to see the notifications endpoint.
+> Backend - port 4567, 
+<br />
+The link will be similar to: 'https://4567-stevecmd-awsbootcampcru-c7fjn6b3pzb.ws-eu107.gitpod.io/api/activities/home' to see Home or, 
+<br />
+'https://4567-stevecmd-awsbootcampcru-c7fjn6b3pzb.ws-eu107.gitpod.io/api/activities/notifications' to see the notifications endpoint. 
+<br />
 > The frontend - port 3000,
 The link will be similar to: 'https://3000-stevecmd-awsbootcampcru-c7fjn6b3pzb.ws-eu107.gitpod.io/'

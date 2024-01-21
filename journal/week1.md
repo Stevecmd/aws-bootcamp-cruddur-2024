@@ -516,4 +516,6 @@ Implement a healthcheck in the Docker compose file --> 'docker-compose.yml' :
       timeout: 10s
 ```
 
+- [PostGres useful tips - CLI](https://www.prisma.io/dataguide/postgresql/setting-up-a-local-postgresql-database#setting-up-postgresql-on-linux)
+
 Hardcoded pass for cruddur users = 1234

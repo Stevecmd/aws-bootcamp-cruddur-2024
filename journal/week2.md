@@ -45,6 +45,7 @@ from opentelemetry.instrumentation.requests import RequestsInstrumentor
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.sdk.trace.export import ConsoleSpanExporter, SimpleSpanProcessor
 ```
 - **Initialize tracing and an exporter that can send data to Honeycomb**
 ```py
@@ -55,6 +56,12 @@ processor = BatchSpanProcessor(OTLPSpanExporter())
 provider.add_span_processor(processor)
 trace.set_tracer_provider(provider)
 tracer = trace.get_tracer(__name__)
+```
+
+To create a span do:
+```py
+  simple_processor = SimpleSpanProcessor(ConsoleSpanExporter())
+  provider.add_span_processor(simple_processor)
 ```
 - **Add the code below inside the 'app' to Initialize automatic instrumentation with Flask**
 ```py
@@ -73,6 +80,11 @@ cors = CORS(
   allow_headers="content-type,if-modified-since",
   methods="OPTIONS,GET,HEAD,POST"
 )
+```
+To create span and attribute, add the following code on the app.py
+```python
+from opentelemetry import trace
+tracer = trace.get_tracer("home.activities")
 ```
 To create span and attribute, add the following code on the home_activities.py
 ```python
@@ -320,3 +332,14 @@ This resulted in rollback implementation breaking due to a change is the flask a
 If you notice rollbar is not tracking, utilize the code from this file:
 
 https://github.com/omenking/aws-bootcamp-cruddur-2023/blob/week-x/backend-flask/lib/rollbar.py
+
+
+### Demo
+
+To view the endpoints visit ports:
+Frontend - port 3000
+> Backend - port 4567,
+The link will be similar to: 'https://4567-stevecmd-awsbootcampcru-c7fjn6b3pzb.ws-eu107.gitpod.io/api/activities/home' to see Home.
+or 'https://4567-stevecmd-awsbootcampcru-c7fjn6b3pzb.ws-eu107.gitpod.io/api/activities/notifications' to see the notifications endpoint.
+> The frontend - port 3000,
+The link will be similar to: 'https://3000-stevecmd-awsbootcampcru-c7fjn6b3pzb.ws-eu107.gitpod.io/'

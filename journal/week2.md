@@ -113,10 +113,25 @@ add this to home_activities.py
 LOGGER.info("HomeActivities")
 ```
 
-And change the following code
+And comment out the following code:
 ```py
 #def run(Logger):
    #Logger.info("HomeActivities")
+```
+<Bold>Enable Gitpod to auto load ports:</Bold>
+In the gitpod.yml file, after the extensions add:
+```python
+ports:
+  - name: frontend
+    port: 3000
+    onOpen: open-browser
+    visibility: public
+  - name: backend
+    port: 4567
+    visibility: public
+  - name: xray-daemon
+    port: 2000
+    visibility: public
 ```
 
 ## #2 AWS X-RAY

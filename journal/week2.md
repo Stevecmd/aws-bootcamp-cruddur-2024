@@ -157,6 +157,7 @@ Amazon has another service called X-RAY which is helpful in tracing requests by 
 ### Resources:
 [AWS X-Ray]([https://pages.github.com/](https://docs.aws.amazon.com/xray/latest/devguide/aws-xray.html))
 [AWS X-Ray Best practices]([https://pages.github.com/](https://stackoverflow.com/questions/54236375/what-are-the-best-practises-for-setting-up-x-ray-daemon))
+[AWS X-ray GitHub repo]([https://github.com/aws/aws-xray-sdk-python])
 
 check the env var for the AWS region using the following command:
 ```sh
@@ -192,6 +193,7 @@ from aws_xray_sdk.ext.flask.middleware import XRayMiddleware
 # Xray
 xray_url = os.getenv("AWS_XRAY_URL")
 xray_recorder.configure(service='backend-flask', dynamic_naming=xray_url)
+XRayMiddleware(app, xray_recorder)
 ```
 
 - Created our own Sampling Rule name 'Cruddur'. This code was written in `aws/json/xray.json` file
@@ -203,7 +205,7 @@ xray_recorder.configure(service='backend-flask', dynamic_naming=xray_url)
       "Priority": 9000,
       "FixedRate": 0.1,
       "ReservoirSize": 5,
-      "ServiceName": "Cruddur",
+      "ServiceName": "backend-flask",
       "ServiceType": "*",
       "Host": "*",
       "HTTPMethod": "*",
@@ -219,13 +221,13 @@ aws xray create-group \
    --group-name "Cruddur" \
    --filter-expression "service(\"$FLASK_ADDRESS\")"
 ```
-<bold> or better yet run </bold>:
+<bold> or better yet run the code below in the terminal </bold>:
 ```py
 aws xray create-group \
    --group-name "Cruddur" \
-   --filter-expression "service(\"backend-flask")"
+   --filter-expression "service(\"backend-flask\")"
 ```
-The above code is useful for setting up monitoring for a specific Flask service using AWS X-Ray. It creates a group that can be used to visualize and analyze traces for that service, helping developers identify and resolve issues more quickly.
+The above code is useful for setting up monitoring for a specific Flask service using AWS X-Ray. It creates a group that can be used to visualize and analyze traces for that service, helping developers identify and resolve issues more quickly. We are specifically monitoring backend-flask.
 
 Then run this command to get the above code executed 
 ```bash
@@ -246,12 +248,12 @@ To install the  X-RAY Daemon Service for that we add the code below to `docker-c
     ports:
       - 2000:2000/udp
 ```
-Also add Environment Variables in the `docker-compose.yml` file:
+Also add Environment Variables in the `docker-compose.yml` file under environment in backend-flask:
 ```yaml
    AWS_XRAY_URL: "*4567-${GITPOD_WORKSPACE_ID}.${GITPOD_WORKSPACE_CLUSTER_HOST}*"
    AWS_XRAY_DAEMON_ADDRESS: "xray-daemon:2000"
 ```
-
+Add the entry below to app.py
 ```python
 # xray
 XRayMiddleware(app, xray_recorder)

@@ -146,6 +146,10 @@ Specifically look at **trace**, **span** and **Adding attributes to spans**.
 ## #2 AWS X-RAY
 Amazon has another service called X-RAY which is helpful in tracing requests by microservices. analyzes and debugs application running on distributed environments. 
 
+### Resources:
+[AWS X-Ray]([https://pages.github.com/](https://docs.aws.amazon.com/xray/latest/devguide/aws-xray.html))
+[AWS X-Ray Best practices]([https://pages.github.com/](https://stackoverflow.com/questions/54236375/what-are-the-best-practises-for-setting-up-x-ray-daemon))
+
 check the env var for the AWS region using the following command:
 ```sh
 env | grep AWS_REGION

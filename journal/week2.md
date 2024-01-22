@@ -193,7 +193,6 @@ from aws_xray_sdk.ext.flask.middleware import XRayMiddleware
 # Xray
 xray_url = os.getenv("AWS_XRAY_URL")
 xray_recorder.configure(service='backend-flask', dynamic_naming=xray_url)
-XRayMiddleware(app, xray_recorder)
 ```
 
 - Created our own Sampling Rule name 'Cruddur'. This code was written in `aws/json/xray.json` file
@@ -253,7 +252,7 @@ Also add Environment Variables in the `docker-compose.yml` file under environmen
    AWS_XRAY_URL: "*4567-${GITPOD_WORKSPACE_ID}.${GITPOD_WORKSPACE_CLUSTER_HOST}*"
    AWS_XRAY_DAEMON_ADDRESS: "xray-daemon:2000"
 ```
-Add the entry below to app.py
+Add the entry below to app.py after the entry 'app = Flask(__name__)'
 ```python
 # xray
 XRayMiddleware(app, xray_recorder)

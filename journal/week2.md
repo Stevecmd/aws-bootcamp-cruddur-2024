@@ -442,33 +442,53 @@ Once done name the commit 'Implement cloudwatch logs' and push the changes.
 
 ## #4 ROLLBAR
 Rollbar is used to **track errors** and monitor applications for error, it tracks and helps one to debug by providing detailed information about the Error.
-- **Created my Rollbar account** ->  https://rollbar.com/
-- **Then created a new Rollbar Project** : It asks you to setup your project , you get chance to select your SDK and also provides instructions on how to start. 
-- **Access token** is provided for your new Rollbar Project.
-- **Installed** `blinker` and `rollbar`.
-  add this code to requirements.text
+- **Create your Rollbar account** ->  https://rollbar.com/
+- **Then create a new Rollbar Project** : It asks you to setup your project , you get the chance to select your SDK and also provides instructions on how to start.
+  Proceed from the Welcome Screen
+  Skip 'Add apps'
+  On the 'Add SDK' menu' > 'All SDKS' > 'Flask'
+- **Access token** is provided for your new Rollbar Project. save it. We will refer to it as <Rollbartoken>
+  Skip their installation instructions as they are incomplete for our purposes.
+
+- **Installation** `of blinker` and `rollbar`.
+  add these dependencies to 'backend-flask > requirements.txt'
       ```py
       blinker
       rollbar
       ```
+  change directories to 'backend-flask' and run:
+  ```sh
+      pip install -r requirements.txt
+  ```
 - Set the access token as an env var:
 ```
-export ROLLBAR_ACCESS_TOKEN="<token>"
-gp env ROLLBAR_ACCESS_TOKEN="<token>"
+export ROLLBAR_ACCESS_TOKEN="<Rollbartoken>"
+gp env ROLLBAR_ACCESS_TOKEN="<Rollbartoken>"
+```
+Confirm that the env var has been saved:
+```sh
+      env | grep ROLLBAR
 ```
 - **Added to backend-flask -> `docker-compose.yml`**
 ```yaml
 ROLLBAR_ACCESS_TOKEN: "${ROLLBAR_ACCESS_TOKEN}"
 ```
 - **Imported** for Rollbar
-  insert the following code in -> backend-flask/app.py
+  insert the following code in -> backend-flask/app.py after the cloudwatch logs imports (line 33)
 ```py
+---- Rollbar -----
+import os
 import rollbar
 import rollbar.contrib.flask
 from flask import got_request_exception
 ```
+After the Honeycomb intialization steps ending in:
 ```py
-# Rollbar
+provider.add_span_processor(processor)
+```
+add the entry below at around line 95 just above '.../rollbar/test':
+```py
+# Rollbar ---------
 rollbar_access_token = os.getenv('ROLLBAR_ACCESS_TOKEN')
 @app.before_first_request
 def init_rollbar():
@@ -487,12 +507,26 @@ def init_rollbar():
     got_request_exception.connect(rollbar.contrib.flask.report_exception, app)
 ```
 - **Add an endpoint to `app.py` to allow rollbar testing:**
+  Place it just above '@app.route("/api/message_groups'
 ```py
 @app.route('/rollbar/test')
 def rollbar_test():
     rollbar.report_message('Hello World!', 'warning')
     return "Hello World!"
 ```
+Run the app (docker-compose up) to confirm that Rollbar is getting a response.
+On the browser, visit the the backend url and append: '.../api/activities/home'
+You should see some 'json'.
+
+In 'docker-compose.yml' under backend-flask > environment, add the Rollbar variables:
+```py
+      ROLLBAR_ACCESS_TOKEN: "${ROLLBAR_ACCESS_TOKEN}"
+```
+
+On the browser, visit the the backend url and append: '.../rollbar/test'
+You should get the response:
+'Hello World!'
+Check the Rollbar website for your logs and make sure to select all the checkboxes under Items > Levels.
 
 ## [Note] Changes to Rollbar:
 
@@ -503,6 +537,8 @@ If you notice rollbar is not tracking, utilize the code from this file:
 
 https://github.com/omenking/aws-bootcamp-cruddur-2023/blob/week-x/backend-flask/lib/rollbar.py
 
+You can test the logs by janking the code eg deleting 'return' at the bottom of the 'home_activities.py' file.
+Once you get your responses, make sure to fix the janked code and commit the changes as 'finished implementing rollbar'.
 
 ### Demo
 

@@ -283,13 +283,14 @@ Also set env vars in backend flask > `docker-compose.yml`
 
 - **Configure LOGGER to use CloudWatch**
 
-add the following code on the app.py on our backend-flask
+add the following code on the 'app.py' file in backend-flask after the X-Ray Middleware import:
 ```python
 # Cloudwatch
 import watchtower
 import logging
 from time import strftime
 ```
+Add the code below directly afterwards:
 ```py
 # Configuring Logger to Use CloudWatch
 LOGGER = logging.getLogger(__name__)
@@ -298,8 +299,9 @@ console_handler = logging.StreamHandler()
 cw_handler = watchtower.CloudWatchLogHandler(log_group='cruddur')
 LOGGER.addHandler(console_handler)
 LOGGER.addHandler(cw_handler)
-LOGGER.info("some message")
+LOGGER.info("test log")
 ```
+
 To log any errors after every request put the code below into app.py just before '@app.route("/api/message_groups...")'
 ```py
 @app.after_request
@@ -308,17 +310,135 @@ def after_request(response):
     LOGGER.error('%s %s %s %s %s %s', timestamp, request.remote_addr, request.method, request.scheme, request.full_path, response.status)
     return response
 ```
-Test the Logs via an API endpoint,
-place the code below in 'home_activities.py'
-```py
-LOGGER.info('Hello Cloudwatch! from  /api/activities/home')
-```
 The code should be similar to:
 ```py
 class HomeActivities:
-      def run():
-            LOGGER.info('Hello Cloudwatch! from  /api/activities/home')
+      def run(logger):
+        logger.info("HomeActivities")
 ```
+In app.py add the new logger:
+```py
+      LOGGER.info('test log')
+```
+Modify 'app.py' as follows:
+```py
+      @app.route("/api/activities/home", methods=['GET'])
+      def data_home():
+        data = HomeActivities.run(logger=LOGGER)
+        return data, 200
+```
+Also confirm you have set env vars in backend flask > `docker-compose.yml` 
+```yaml
+      AWS_DEFAULT_REGION: "${AWS_DEFAULT_REGION}"
+      AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
+      AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
+```
+Modify 'backend-flask/services/user_activities.py' to look as below:
+```py
+from datetime import datetime, timedelta, timezone
+from aws_xray_sdk.core import xray_recorder
+class UserActivities:
+  def run(user_handle):
+    # xray ---
+    #segment = xray_recorder.begin_segment('user_activities')
+
+    model = {
+      'errors': None,
+      'data': None
+    }
+
+    now = datetime.now(timezone.utc).astimezone()
+    
+    if user_handle == None or len(user_handle) < 1:
+      model['errors'] = ['blank_user_handle']
+    else:
+      now = datetime.now()
+      results = [{
+        'uuid': '248959df-3079-4947-b847-9e0892d1bab4',
+        'handle':  'Andrew Brown',
+        'message': 'Cloud is fun!',
+        'created_at': (now - timedelta(days=1)).isoformat(),
+        'expires_at': (now + timedelta(days=31)).isoformat()
+      }]
+      model['data'] = results
+
+    #subsegment = xray_recorder.begin_subsegment('mock-data')
+    # xray ---
+    #dict = {
+    #  "now": now.isoformat(),
+    #  "results-size": len(model['data'])
+    #}
+    #subsegment.put_metadata('key', dict, 'namespace')
+
+    return model
+```
+Cloud watch logs can get expensive, to deactivate them revert the code above as follows:
+'home_activities.py'
+```py
+class HomeActivities:
+      def run():
+        #logger.info("HomeActivities")
+```
+and 'app.py'
+```py
+# Configuring Logger to Use CloudWatch
+# LOGGER = logging.getLogger(__name__)
+# LOGGER.setLevel(logging.DEBUG)
+# console_handler = logging.StreamHandler()
+# cw_handler = watchtower.CloudWatchLogHandler(log_group='cruddur')
+# LOGGER.addHandler(console_handler)
+# LOGGER.addHandler(cw_handler)
+# LOGGER.info("test log")
+```
+```py
+      @app.route("/api/activities/home", methods=['GET'])
+      def data_home():
+        data = HomeActivities.run()
+        return data, 200
+```
+We can now disable x-ray as well in 'app.py':
+```python
+# Xray
+# from aws_xray_sdk.core import xray_recorder
+# from aws_xray_sdk.ext.flask.middleware import XRayMiddleware
+```
+```python
+# Xray
+# xray_url = os.getenv("AWS_XRAY_URL")
+# xray_recorder.configure(service='backend-flask', dynamic_naming=xray_url)
+```
+
+```python
+# xray
+# XRayMiddleware(app, xray_recorder)
+```
+
+```py
+#@app.after_request
+#def after_request(response):
+#    timestamp = strftime('[%Y-%b-%d %H:%M]')
+#    LOGGER.error('%s %s %s %s %s %s', timestamp, request.remote_addr, request.method, request.scheme, request.full_path, response.status)
+#   return response
+```
+In 'backend-flask > services > user_activities.py':
+```py
+class UserActivities:
+  def run(user_handle):
+    # xray ---
+    #segment = xray_recorder.begin_segment('user_activities')
+```
+```py
+    #subsegment = xray_recorder.begin_subsegment('mock-data')
+    # xray ---
+    #dict = {
+    #  "now": now.isoformat(),
+    #  "results-size": len(model['data'])
+    #}
+    #subsegment.put_metadata('key', dict, 'namespace')
+
+    return model
+```
+Once done name the commit 'Implement cloudwatch logs' and push the changes.
 
 ## #4 ROLLBAR
 Rollbar is used to **track errors** and monitor applications for error, it tracks and helps one to debug by providing detailed information about the Error.

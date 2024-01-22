@@ -136,6 +136,14 @@ ports:
     port: 2000
     visibility: public
 ```
+<Bold>Enable Gitpod to auto install frontend-react dependencies:</Bold>
+In the gitpod.yml file, after the aws-cli dependencie add:
+```python
+  - name: react-js
+    init: |
+      cd frontend-react-js
+      npm i
+```
 
 For a full walkthrough on how to add Honeycomb check out the docs at:
 ```html
@@ -172,7 +180,7 @@ Additionally, to install all the dependencies via docker compose run:
 pip install -r requirements.txt
 ```
 
-Make sure to create segements and subsegments by following the instructional videos. 
+Make sure to create segments and subsegments by following the instructional videos. 
 
 Insert the following code inside the app.py
 ```python

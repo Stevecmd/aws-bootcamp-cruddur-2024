@@ -258,6 +258,8 @@ Add the entry below to app.py after the entry 'app = Flask(__name__)'
 XRayMiddleware(app, xray_recorder)
 ```
 
+
+
 ## #3 CloudWatch
 For CLoudWatch install `watchtower` and import `watchtower`, `logging` and `strftime from time`.
 

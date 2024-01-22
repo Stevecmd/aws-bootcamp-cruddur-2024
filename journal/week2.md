@@ -300,6 +300,7 @@ LOGGER.addHandler(console_handler)
 LOGGER.addHandler(cw_handler)
 LOGGER.info("some message")
 ```
+To log any errors after every request put the code below into app.py just before '@app.route("/api/message_groups...")'
 ```py
 @app.after_request
 def after_request(response):
@@ -307,9 +308,16 @@ def after_request(response):
     LOGGER.error('%s %s %s %s %s %s', timestamp, request.remote_addr, request.method, request.scheme, request.full_path, response.status)
     return response
 ```
-Test the Logs via an API endpoint
-```
+Test the Logs via an API endpoint,
+place the code below in 'home_activities.py'
+```py
 LOGGER.info('Hello Cloudwatch! from  /api/activities/home')
+```
+The code should be similar to:
+```py
+class HomeActivities:
+      def run():
+            LOGGER.info('Hello Cloudwatch! from  /api/activities/home')
 ```
 
 ## #4 ROLLBAR

@@ -54,9 +54,9 @@ Amplify.configure({
   Auth: {
     // We are not using an Identity Pool
     // identityPoolId: process.env.REACT_APP_IDENTITY_POOL_ID, // REQUIRED - Amazon Cognito Identity Pool ID
-    region: process.env.REACT_AWS_PROJECT_REGION,           // REQUIRED - Amazon Cognito Region
+    region: process.env.REACT_APP_AWS_PROJECT_REGION,           // REQUIRED - Amazon Cognito Region
     userPoolId: process.env.REACT_APP_AWS_USER_POOLS_ID,         // OPTIONAL - Amazon Cognito User Pool ID
-    userPoolWebClientId: process.env.REACT_APP_AWS_USER_POOLS_WEB_CLIENT_ID,   // OPTIONAL - Amazon Cognito Web Client ID (26-char alphanumeric string)
+    userPoolWebClientId: process.env.REACT_APP_CLIENT_ID,   // OPTIONAL - Amazon Cognito Web Client ID (26-char alphanumeric string)
   }
 });
 ```
@@ -69,12 +69,16 @@ Set the env vars below in docker-compose.yml > 'frontend-react-js' > 'environmen
       REACT_APP_CLIENT_ID: "5b6ro31g97urk767adrbrdj1g5"
 ```
 
-### Then to check the **Authentication Process** I added this code in my `HomeFeedPage.js`
+### **Authentication Process** - Conditionally show components based on 'logged in' or 'logged out'.
+In 'frontend-react-js' > 'src' > 'pages' > `HomeFeedPage.js`.
+< br/>
+Add the import:
 ```js
 import { Auth } from 'aws-amplify';
 ```
 
-delete the code with the cookies
+delete the code with the cookies (previously used to simulate authentication):
+(hint: around line 40-49)
 ```js
   const checkAuth = async () => {
     console.log('checkAuth')
@@ -85,11 +89,8 @@ delete the code with the cookies
     }
   };
 ```
-
+Input the following to implement Cognito Authorization:
 ```js
-// set a state
-const [user, setUser] = React.useState(null);
-
 // check if we are authenicated
 const checkAuth = async () => {
   Auth.currentAuthenticatedUser({
@@ -110,76 +111,66 @@ const checkAuth = async () => {
   .catch((err) => console.log(err));
 };
 
-// check when the page loads if we are authenicated
+// check if we are authenicated when the page loads
 React.useEffect(()=>{
+  //prevents double call
+  if (dataFetchedRef.current) return;
+  dataFetchedRef.current = true;
+
   loadData();
   checkAuth();
 }, [])
 ```
+
 Commit the code as: 'Integrate Cognito'.
 
-### To render two React components: `DesktopNavigation` and `DesktopSidebar`, passing some properties to each of them.
-```js
-<DesktopNavigation user={user} active={'home'} setPopped={setPopped} />
-<DesktopSidebar user={user} />
-```
-### Then added this code in `DesktopNavigation.js` which helps you to check whether you are logged in or not by passing the`user` to `ProfileInfo`.
-```js
-import './DesktopNavigation.css';
-import {ReactComponent as Logo} from './svg/logo.svg';
-import DesktopNavigationLink from '../components/DesktopNavigationLink';
-import CrudButton from '../components/CrudButton';
-import ProfileInfo from '../components/ProfileInfo';
+### Refactor 'DesktopSidebar.js': path: 'frontend-react-js/src/components/DesktopSidebar.js'
+```py
+import './DesktopSidebar.css';
+import Search from '../components/Search';
+import TrendingSection from '../components/TrendingsSection'
+import SuggestedUsersSection from '../components/SuggestedUsersSection'
+import JoinSection from '../components/JoinSection'
 
-export default function DesktopNavigation(props) {
+export default function DesktopSidebar(props) {
+  const trendings = [
+    {"hashtag": "100DaysOfCloud", "count": 2053 },
+    {"hashtag": "CloudProject", "count": 8253 },
+    {"hashtag": "AWS", "count": 9053 },
+    {"hashtag": "FreeWillyReboot", "count": 7753 }
+  ]
 
-  let button;
-  let profile;
-  let notificationsLink;
-  let messagesLink;
-  let profileLink;
+  const users = [
+    {"display_name": "Andrew Brown", "handle": "andrewbrown"}
+  ]
+
+  let trending;
+  let suggested;
+  let join;
   if (props.user) {
-    button = <CrudButton setPopped={props.setPopped} />;
-    profile = <ProfileInfo user={props.user} />;
-    notificationsLink = <DesktopNavigationLink 
-      url="/notifications" 
-      name="Notifications" 
-      handle="notifications" 
-      active={props.active} />;
-    messagesLink = <DesktopNavigationLink 
-      url="/messages"
-      name="Messages"
-      handle="messages" 
-      active={props.active} />
-    profileLink = <DesktopNavigationLink 
-      url="/@andrewbrown" 
-      name="Profile"
-      handle="profile"
-      active={props.active} />
+    trending = <TrendingSection trendings={trendings} />
+    suggested = <SuggestedUsersSection users={users} />
+  } else {
+    join = <JoinSection />
   }
 
   return (
-    <nav>
-      <Logo className='logo' />
-      <DesktopNavigationLink url="/" 
-        name="Home"
-        handle="home"
-        active={props.active} />
-      {notificationsLink}
-      {messagesLink}
-      {profileLink}
-      <DesktopNavigationLink url="/#" 
-        name="More" 
-        handle="more"
-        active={props.active} />
-      {button}
-      {profile}
-    </nav>
+    <section>
+      <Search />
+      {trending}
+      {suggested}
+      {join}
+      <footer>
+        <a href="#">About</a>
+        <a href="#">Terms of Service</a>
+        <a href="#">Privacy Policy</a>
+      </footer>
+    </section>
   );
 }
 ```
 
-### In `ProfileInfo.js`
+### Refactor `ProfileInfo.js`
 
 This code defines a function called `signOut` that uses the `Auth` object from the `aws-amplify` library to sign out the currently authenticated user from an AWS Amplify application.
 delete the following code:
@@ -213,11 +204,64 @@ const signOut = async () => {
   }
 }
 ```
+
+The full `ProfileInfo.js` page > 'frontend-react-js/src/components/ProfileInfo.js' should now contain:
+ 
+```py
+import './ProfileInfo.css';
+import {ReactComponent as ElipsesIcon} from './svg/elipses.svg';
+import React from "react";
+
+// [TODO] Authenication
+import { Auth } from 'aws-amplify';
+
+export default function ProfileInfo(props) {
+  const [popped, setPopped] = React.useState(false);
+
+  const click_pop = (event) => {
+    setPopped(!popped)
+  }
+
+  const signOut = async () => {
+    try {
+        await Auth.signOut({ global: true });
+        window.location.href = "/"
+        #localStorage.removeItem("access_token")
+    } catch (error) {
+        console.log('error signing out: ', error);
+    }
+  }
+
+  const classes = () => {
+    let classes = ["profile-info-wrapper"];
+    if (popped == true){
+      classes.push('popped');
+    }
+    return classes.join(' ');
+  }
+
+  return (
+    <div className={classes()}>
+      <div className="profile-dialog">
+        <button onClick={signOut}>Sign Out</button> 
+      </div>
+      <div className="profile-info" onClick={click_pop}>
+        <div className="profile-avatar"></div>
+        <div className="profile-desc">
+          <div className="profile-display-name">{props.user.display_name || "My Name" }</div>
+          <div className="profile-username">@{props.user.handle || "handle"}</div>
+        </div>
+        <ElipsesIcon className='icon' />
+      </div>
+    </div>
+  )
+}
+```
 Overall, this code provides a simple and straightforward way to sign out a user from an AWS Amplify application by using the `Auth` object from the `aws-amplify` library.
 
 ## Sign-in Page, Sign-out Page and Confirmation Page
-### Implementation of the sign in page
-From the **signinpage.js** remove the following code
+### Implementation of the sign in page. 
+From the **signinpage.js** located at: 'frontend-react-js/src/pages/SigninPage.js', remove the following code
 ```
 import Cookies from 'js-cookie'
 
@@ -264,9 +308,124 @@ const onsubmit = async (event) => {
   }
 ```
 
-To try, just launch the container up on **"docker-compose.yml"**  and see if the login page works. to troubleshoot open "developer tools" or use inspect (browser) if you receive "NotAuthorizedException: Incorrect user or password".This means everything is set properly. if you got an error "auth not defined", the problem is the cognito user pool configuration. need to recreate.
+The full Sign in Page should now be similar to:
+```py
+import './SigninPage.css';
+import React from "react";
+import {ReactComponent as Logo} from '../components/svg/logo.svg';
+import { Link } from "react-router-dom";
 
-Create a user on the cognito user pool and force change the password using the command on troubleshooting (there is no way to change on password via console). the password to login will be Testing1234! (as the commandline shows)
+// [TODO] Authenication
+import { Auth } from 'aws-amplify';
+
+export default function SigninPage() {
+
+  const [email, setEmail] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [errors, setErrors] = React.useState('');
+
+  const onsubmit = async (event) => {
+    setErrors('')
+    event.preventDefault();
+    Auth.signIn(email, password)
+    .then(user => {
+      console.log('user',user)
+      localStorage.setItem("access_token", user.signInUserSession.accessToken.jwtToken)
+      window.location.href = "/"
+    })
+    .catch(error => { 
+      if (error.code == 'UserNotConfirmedException') {
+        window.location.href = "/confirm"
+      }
+      setErrors(error.message)
+    });
+    return false
+  }
+
+  const email_onchange = (event) => {
+    setEmail(event.target.value);
+  }
+  const password_onchange = (event) => {
+    setPassword(event.target.value);
+  }
+
+  let el_errors;
+  if (errors){
+    el_errors = <div className='errors'>{errors}</div>;
+  }
+
+  return (
+    <article className="signin-article">
+      <div className='signin-info'>
+        <Logo className='logo' />
+      </div>
+      <div className='signin-wrapper'>
+        <form 
+          className='signin_form'
+          onSubmit={onsubmit}
+        >
+          <h2>Sign into your Cruddur account</h2>
+          <div className='fields'>
+            <div className='field text_field username'>
+              <label>Email</label>
+              <input
+                type="text"
+                value={email}
+                onChange={email_onchange} 
+              />
+            </div>
+            <div className='field text_field password'>
+              <label>Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={password_onchange} 
+              />
+            </div>
+          </div>
+          {el_errors}
+          <div className='submit'>
+            <Link to="/forgot" className="forgot-link">Forgot Password?</Link>
+            <button type='submit'>Sign In</button>
+          </div>
+
+        </form>
+        <div className="dont-have-an-account">
+          <span>
+            Don't have an account?
+          </span>
+          <Link to="/signup">Sign up!</Link>
+        </div>
+      </div>
+
+    </article>
+  );
+}
+```
+
+To try, just launch the container up on **"docker-compose.yml"**  and see if the login page works. to troubleshoot open "developer tools" or use inspect (browser) if you receive "NotAuthorizedException: Incorrect user or password".This means everything is set properly. if you got an error "auth not defined", the problem is the cognito user pool configuration. needs to be recreated.
+
+#### Manually Create a user
+We could create a user manually in the cognito user pool (**NB** there is no way to change on password via console).
+<br />
+On AWS Cognito, select add user.
+Select Email.
+Dont send an invitation.
+Username: 'andrewbrown'.
+Email: '<use-your-preferred-email-address>'
+Password: 'Testing123!'
+You will be required to access the email to confirm registration.
+<br />
+
+If your do not receive an email, we can create the user in the CLI:
+```sh
+aws cognito-idp admin-set-user-password \
+  --user-pool-id <your-user-pool-id> \
+  --username <username> \
+  --password <password> \
+  --permanent
+```
+
 
 ### Implementation the sign-up page
 Since you have managed to access using the credential created via console, it is time to delete it cos it is no anymore needed.

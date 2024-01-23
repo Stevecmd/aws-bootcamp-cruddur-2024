@@ -3,6 +3,7 @@
 ## #1 HONEYCOMB 
 
 On [Honeycomb website](https://www.honeycomb.io/), create a new environment named `bootcamp`, and get the corresponding API key.
+<br />
 [Documentation](docs.honeycomb.io)
 To set the Honeycomb API Key as an environment variable in Gitpod use these commands: 
 ```bash
@@ -14,10 +15,14 @@ Confirm the env vars have been set:
 ```sh
       env | grep HONEY
 ```
-Then use your API Key in `backend-flask` -> `docker-compose.yml` file >   
-under
-'backend-flask:
-    environment:' 
+Then use your API Key in `backend-flask` -> `docker-compose.yml` file. 
+<br />
+under >
+```
+backend-flask:
+    environment:
+``` 
+<br />
 
 add the code below:
 
@@ -26,6 +31,8 @@ add the code below:
       OTEL_EXPORTER_OTLP_ENDPOINT: "https://api.honeycomb.io"
       OTEL_EXPORTER_OTLP_HEADERS: "x-honeycomb-team=${HONEYCOMB_API_KEY}"
 ```
+<br />
+
 Add the code below in `backend-flask` -> `requirements.txt` to install required packages to use Open Telemetry (OTEL) services.
 ```txt
 opentelemetry-api 
@@ -35,14 +42,18 @@ opentelemetry-instrumentation-flask
 opentelemetry-instrumentation-requests
 ```
 
+<br />
 Then run the code below from within 'backend-flask':
+
 ```sh
       pip install -r requirements.txt
 ```
 
 - **To get required packages**
-Below is the `backend-flask>>app.py` code required for Honeycomb, 
-To be placed at around line 16 after 'from services...' but above 'app = Flask(__name__)'
+  <br />
+Below is the `backend-flask>>app.py` code required for Honeycomb, <br />
+To be placed at around line 16 after `from services...` but above `app = Flask(__name__)` <br />
+
 ```py
 # Honeycomb ------------
 from opentelemetry import trace
@@ -54,7 +65,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.sdk.trace.export import ConsoleSpanExporter, SimpleSpanProcessor
 ```
 - **Initialize tracing and an exporter that can send data to Honeycomb**
-```py
+```python
 # Honeycomb ------------
 # Initialize tracing and an exporter that can send data to Honeycomb
 provider = TracerProvider()
@@ -63,14 +74,18 @@ provider.add_span_processor(processor)
 trace.set_tracer_provider(provider)
 tracer = trace.get_tracer(__name__)
 ```
+<br />
 
-To create a span do:
-```py
+To create a span do: 
+<br />
+```python
   simple_processor = SimpleSpanProcessor(ConsoleSpanExporter())
   provider.add_span_processor(simple_processor)
 ```
+
 - **Add the code below inside the 'app' to Initialize automatic instrumentation with Flask**
-```py
+  <br />
+```python
 # Honeycomb ------------
 # Initialize automatic instrumentation with Flask
 FlaskInstrumentor().instrument_app(app)
@@ -87,23 +102,31 @@ cors = CORS(
   methods="OPTIONS,GET,HEAD,POST"
 )
 ```
-To create span and attribute, add the following code on the app.py
+
+<br />
+To create a span and attribute, add the following code on 'app.py':
+
 ```python
-from opentelemetry import trace
-tracer = trace.get_tracer("home.activities")
+      from opentelemetry import trace
+      tracer = trace.get_tracer("home.activities")
 ```
-To create span and attribute, add the following code on the home_activities.py
+
+<br />
+To create span and attribute, add the following code in 'home_activities.py':
+
 ```python
-from opentelemetry import trace
-tracer = trace.get_tracer("home.activities")
+      from opentelemetry import trace
+      tracer = trace.get_tracer("home.activities")
 ```
+
 ```python
-with tracer.start_as_current_span("home-activities-mock-data"):
-    span = trace.get_current_span()
+      with tracer.start_as_current_span("home-activities-mock-data"):
+          span = trace.get_current_span()
 ```
-at the end of the code, put the following
+
+at the end of the code, add the following:
 ```python
-span.set_attribute("app.result_lenght", len(results))
+      span.set_attribute("app.result_lenght", len(results))
 ```
 
 An idea for an additional span would be:
@@ -121,6 +144,7 @@ And comment out the following code:
 #def run(Logger):
    #Logger.info("HomeActivities")
 ```
+
 <Bold>Enable Gitpod to auto load ports:</Bold>
 In the gitpod.yml file, after the extensions add:
 ```python
@@ -136,6 +160,7 @@ ports:
     port: 2000
     visibility: public
 ```
+
 <Bold>Enable Gitpod to auto install frontend-react dependencies:</Bold>
 In the gitpod.yml file, after the aws-cli dependencie add:
 ```python
@@ -145,9 +170,11 @@ In the gitpod.yml file, after the aws-cli dependencie add:
       npm i
 ```
 
+<br />
+
 For a full walkthrough on how to add Honeycomb check out the docs at:
 ```html
-https://docs.honeycomb.io/getting-data-in/opentelemetry/python-distro/
+      https://docs.honeycomb.io/getting-data-in/opentelemetry/python-distro/
 ```
 Specifically look at **trace**, **span** and **Adding attributes to spans**.
 
@@ -460,7 +487,7 @@ Rollbar is used to **track errors** and monitor applications for error, it track
   ```sh
       pip install -r requirements.txt
   ```
-- Set the access token as an env var:
+Set the access token as an env var:
 ```
 export ROLLBAR_ACCESS_TOKEN="<Rollbartoken>"
 gp env ROLLBAR_ACCESS_TOKEN="<Rollbartoken>"
@@ -544,11 +571,10 @@ Once you get your responses, make sure to fix the janked code and commit the cha
 
 To view the endpoints visit ports:
 Frontend - port 3000
-> Backend - port 4567, 
-<br />
+- Backend - port 4567, <br />
 The link will be similar to: 'https://4567-stevecmd-awsbootcampcru-c7fjn6b3pzb.ws-eu107.gitpod.io/api/activities/home' to see Home or, 
-<br />
 'https://4567-stevecmd-awsbootcampcru-c7fjn6b3pzb.ws-eu107.gitpod.io/api/activities/notifications' to see the notifications endpoint. 
 <br />
-> The frontend - port 3000,
+
+- The frontend - port 3000, <br />
 The link will be similar to: 'https://3000-stevecmd-awsbootcampcru-c7fjn6b3pzb.ws-eu107.gitpod.io/'

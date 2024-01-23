@@ -79,6 +79,8 @@ tracer = trace.get_tracer(__name__)
 To create a span do: 
 <br />
 ```python
+  # OTEL --------------
+  # Show this in the logs within backend-flask app (STDOUT)
   simple_processor = SimpleSpanProcessor(ConsoleSpanExporter())
   provider.add_span_processor(simple_processor)
 ```
@@ -187,6 +189,7 @@ Amazon has another service called X-RAY which is helpful in tracing requests by 
 [AWS X-Ray Best practices](https://pages.github.com/](https://stackoverflow.com/questions/54236375/what-are-the-best-practises-for-setting-up-x-ray-daemon))
 <br />
 [AWS X-ray GitHub repo](https://github.com/aws/aws-xray-sdk-python)
+[Hashnode Article by Olga](https://olley.hashnode.dev/aws-free-cloud-bootcamp-instrumenting-aws-x-ray-subsegments)
 
 check the env var for the AWS region using the following command:
 ```sh
@@ -197,6 +200,18 @@ If there is no result run:
 export AWS_REGION="<chosen region>"
 gp env AWS_REGION="<chosen region>"
 ```
+Check that your authentication details are still in place and that you are able to connect to AWS:
+```py
+aws sts get-caller-identity
+```
+The prompt should return data similar to:
+```py
+      "UserId": "<AccountName>"
+      "Account": "<AccountNumber>"
+      "Arn": "<AccountARN>"
+```
+<br />
+
 - To get your application traced in AWS X-RAY you need to install aws-xray-sdk module. You can do this by running the commands below:
 ```
 pip install aws-xray-sdk
@@ -222,6 +237,31 @@ from aws_xray_sdk.ext.flask.middleware import XRayMiddleware
 # Xray
 xray_url = os.getenv("AWS_XRAY_URL")
 xray_recorder.configure(service='backend-flask', dynamic_naming=xray_url)
+XRayMiddleware(app, xray_recorder)
+```
+Modify the code in app.py as follows:
+around line 154:
+```py
+@app.route("/api/activities/home", methods=['GET'])
+@xray_recorder.capture('activities_home')
+def data_home():
+  data = HomeActivities.run()
+  return data, 200
+```
+
+around line 160:
+```py
+@app.route("/api/activities/@<string:handle>", methods=['GET'])
+@xray_recorder.capture('activities_users')
+def data_handle(handle):
+  model = UserActivities.run(handle)
+  if model['errors'] is not None:
+```
+
+around line 192:
+```py
+@app.route("/api/activities/<string:activity_uuid>", methods=['GET'])
+@xray_recorder.capture('activities_show')
 ```
 
 - Created our own Sampling Rule name 'Cruddur'. This code was written in `aws/json/xray.json` file
@@ -243,13 +283,7 @@ xray_recorder.configure(service='backend-flask', dynamic_naming=xray_url)
 }
 ```
 - **To create a new group for tracing and analyzing errors and faults in a Flask application.**
-```py
-FLASK_ADDRESS="https://4567-${GITPOD_WORKSPACE_ID}.${GITPOD_WORKSPACE_CLUSTER_HOST}"
-aws xray create-group \
-   --group-name "Cruddur" \
-   --filter-expression "service(\"$FLASK_ADDRESS\")"
-```
-<bold> or better yet run the code below in the terminal </bold>:
+<bold> Add a sampling group to monitor log events </bold>:
 ```py
 aws xray create-group \
    --group-name "Cruddur" \
@@ -287,7 +321,12 @@ Add the entry below to app.py after the entry 'app = Flask(__name__)'
 XRayMiddleware(app, xray_recorder)
 ```
 
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+The full code for 'user_activities.py' service having implemented x-ray should be similar to:
+```py
+Insert data here
 
+```
 
 ## #3 CloudWatch
 For CLoudWatch install `watchtower` and import `watchtower`, `logging` and `strftime from time`.
@@ -333,6 +372,7 @@ LOGGER.info("test log")
 
 To log any errors after every request put the code below into app.py just before '@app.route("/api/message_groups...")'
 ```py
+# ------- Cloudwatch Logs ----------
 @app.after_request
 def after_request(response):
     timestamp = strftime('[%Y-%b-%d %H:%M]')
@@ -368,39 +408,261 @@ from datetime import datetime, timedelta, timezone
 from aws_xray_sdk.core import xray_recorder
 class UserActivities:
   def run(user_handle):
-    # xray ---
-    #segment = xray_recorder.begin_segment('user_activities')
+    try:
+      model = {
+        'errors': None,
+        'data': None
+      }
 
-    model = {
-      'errors': None,
-      'data': None
-    }
+      now = datetime.now(timezone.utc).astimezone()
+      
+      if user_handle == None or len(user_handle) < 1:
+        model['errors'] = ['blank_user_handle']
+      else:
+        now = datetime.now()
+        results = [{
+          'uuid': '248959df-3079-4947-b847-9e0892d1bab4',
+          'handle':  'Andrew Brown',
+          'message': 'Cloud is fun!',
+          'created_at': (now - timedelta(days=1)).isoformat(),
+          'expires_at': (now + timedelta(days=31)).isoformat()
+        }]
+        model['data'] = results
 
-    now = datetime.now(timezone.utc).astimezone()
-    
-    if user_handle == None or len(user_handle) < 1:
-      model['errors'] = ['blank_user_handle']
-    else:
-      now = datetime.now()
-      results = [{
-        'uuid': '248959df-3079-4947-b847-9e0892d1bab4',
-        'handle':  'Andrew Brown',
-        'message': 'Cloud is fun!',
-        'created_at': (now - timedelta(days=1)).isoformat(),
-        'expires_at': (now + timedelta(days=31)).isoformat()
-      }]
-      model['data'] = results
-
-    #subsegment = xray_recorder.begin_subsegment('mock-data')
-    # xray ---
-    #dict = {
-    #  "now": now.isoformat(),
-    #  "results-size": len(model['data'])
-    #}
-    #subsegment.put_metadata('key', dict, 'namespace')
-
+      subsegment = xray_recorder.begin_subsegment('mock-data')
+      # xray ---
+      dict = {
+        "now": now.isoformat(),
+        "results-size": len(model['data'])
+      }
+      subsegment.put_metadata('key', dict, 'namespace')
+      xray_recorder.end_subsegment()
+    finally:  
+    #  # Close the segment
+      xray_recorder.end_subsegment()
     return model
 ```
+
+Modify 'backend-flask/app.py' to look as below:
+```py
+from flask import Flask
+from flask import request
+from flask_cors import CORS, cross_origin
+import os
+
+from services.home_activities import *
+from services.user_activities import *
+from services.create_activity import *
+from services.create_reply import *
+from services.search_activities import *
+from services.message_groups import *
+from services.messages import *
+from services.create_message import *
+from services.show_activity import *
+
+# HoneyComb ---------
+from opentelemetry import trace
+from opentelemetry.instrumentation.flask import FlaskInstrumentor
+from opentelemetry.instrumentation.requests import RequestsInstrumentor
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.sdk.trace.export import ConsoleSpanExporter, SimpleSpanProcessor
+
+# X-RAY ----------
+from aws_xray_sdk.core import xray_recorder
+from aws_xray_sdk.ext.flask.middleware import XRayMiddleware
+
+# CloudWatch Logs ----
+import watchtower
+import logging
+
+# Rollbar ------
+from time import strftime
+import os
+import rollbar
+import rollbar.contrib.flask
+from flask import got_request_exception
+
+# Configuring Logger to Use CloudWatch
+# LOGGER = logging.getLogger(__name__)
+# LOGGER.setLevel(logging.DEBUG)
+# console_handler = logging.StreamHandler()
+# cw_handler = watchtower.CloudWatchLogHandler(log_group='cruddur')
+# LOGGER.addHandler(console_handler)
+# LOGGER.addHandler(cw_handler)
+# LOGGER.info("test log")
+
+# HoneyComb ---------
+# Initialize tracing and an exporter that can send data to Honeycomb
+provider = TracerProvider()
+processor = BatchSpanProcessor(OTLPSpanExporter())
+provider.add_span_processor(processor)
+
+# X-RAY ----------
+xray_url = os.getenv("AWS_XRAY_URL")
+xray_recorder.configure(service='backend-flask', dynamic_naming=xray_url)
+
+# OTEL ----------
+# Show this in the logs within the backend-flask app (STDOUT)
+#simple_processor = SimpleSpanProcessor(ConsoleSpanExporter())
+#provider.add_span_processor(simple_processor)
+
+trace.set_tracer_provider(provider)
+tracer = trace.get_tracer(__name__)
+
+app = Flask(__name__)
+
+# X-RAY ----------
+XRayMiddleware(app, xray_recorder)
+
+# HoneyComb ---------
+# Initialize automatic instrumentation with Flask
+FlaskInstrumentor().instrument_app(app)
+RequestsInstrumentor().instrument()
+
+
+frontend = os.getenv('FRONTEND_URL')
+backend = os.getenv('BACKEND_URL')
+origins = [frontend, backend]
+cors = CORS(
+  app, 
+  resources={r"/api/*": {"origins": origins}},
+  expose_headers="location,link",
+  allow_headers="content-type,if-modified-since",
+  methods="OPTIONS,GET,HEAD,POST"
+)
+
+# CloudWatch Logs -----
+#@app.after_request
+#def after_request(response):
+#    timestamp = strftime('[%Y-%b-%d %H:%M]')
+#    LOGGER.error('%s %s %s %s %s %s', timestamp, request.remote_addr, request.method, request.scheme, request.full_path, response.status)
+#    return response
+
+# Rollbar ----------
+rollbar_access_token = os.getenv('ROLLBAR_ACCESS_TOKEN')
+@app.before_first_request
+def init_rollbar():
+    """init rollbar module"""
+    rollbar.init(
+        # access token
+        rollbar_access_token,
+        # environment name
+        'production',
+        # server root directory, makes tracebacks prettier
+        root=os.path.dirname(os.path.realpath(__file__)),
+        # flask already sets up logging
+        allow_logging_basic_config=False)
+
+    # send exceptions from `app` to rollbar, using flask's signal system.
+    got_request_exception.connect(rollbar.contrib.flask.report_exception, app)
+
+@app.route('/rollbar/test')
+def rollbar_test():
+    rollbar.report_message('Hello World!', 'warning')
+    return "Hello World!"
+
+@app.route("/api/message_groups", methods=['GET'])
+def data_message_groups():
+  user_handle  = 'andrewbrown'
+  model = MessageGroups.run(user_handle=user_handle)
+  if model['errors'] is not None:
+    return model['errors'], 422
+  else:
+    return model['data'], 200
+
+@app.route("/api/messages/@<string:handle>", methods=['GET'])
+def data_messages(handle):
+  user_sender_handle = 'andrewbrown'
+  user_receiver_handle = request.args.get('user_reciever_handle')
+
+  model = Messages.run(user_sender_handle=user_sender_handle, user_receiver_handle=user_receiver_handle)
+  if model['errors'] is not None:
+    return model['errors'], 422
+  else:
+    return model['data'], 200
+  return
+
+@app.route("/api/messages", methods=['POST','OPTIONS'])
+@cross_origin()
+def data_create_message():
+  user_sender_handle = 'andrewbrown'
+  user_receiver_handle = request.json['user_receiver_handle']
+  message = request.json['message']
+
+  model = CreateMessage.run(message=message,user_sender_handle=user_sender_handle,user_receiver_handle=user_receiver_handle)
+  if model['errors'] is not None:
+    return model['errors'], 422
+  else:
+    return model['data'], 200
+  return
+
+@app.route("/api/activities/home", methods=['GET'])
+@xray_recorder.capture('activities_home')
+def data_home():
+  data = HomeActivities.run()
+  return data, 200
+
+@app.route("/api/activities/@<string:handle>", methods=['GET'])
+@xray_recorder.capture('activities_users')
+def data_handle(handle):
+  model = UserActivities.run(handle)
+  if model['errors'] is not None:
+    return model['errors'], 422
+  else:
+    return model['data'], 200
+
+@app.route("/api/activities/search", methods=['GET'])
+def data_search():
+  term = request.args.get('term')
+  model = SearchActivities.run(term)
+  if model['errors'] is not None:
+    return model['errors'], 422
+  else:
+    return model['data'], 200
+  return
+
+@app.route("/api/activities", methods=['POST','OPTIONS'])
+@cross_origin()
+def data_activities():
+  user_handle  = 'andrewbrown'
+  message = request.json['message']
+  ttl = request.json['ttl']
+  model = CreateActivity.run(message, user_handle, ttl)
+  if model['errors'] is not None:
+    return model['errors'], 422
+  else:
+    return model['data'], 200
+  return
+
+@app.route("/api/activities/<string:activity_uuid>", methods=['GET'])
+@xray_recorder.capture('activities_show')
+def data_show_activity(activity_uuid):
+  data = ShowActivity.run(activity_uuid=activity_uuid)
+  return data, 200
+
+@app.route("/api/activities/<string:activity_uuid>/reply", methods=['POST','OPTIONS'])
+@cross_origin()
+def data_activities_reply(activity_uuid):
+  user_handle  = 'andrewbrown'
+  message = request.json['message']
+  model = CreateReply.run(message, user_handle, activity_uuid)
+  if model['errors'] is not None:
+    return model['errors'], 422
+  else:
+    return model['data'], 200
+  return
+
+if __name__ == "__main__":
+  app.run(debug=True)
+```
+At this point X-ray should be working.
+Visit the frontend link and append '/@AndrewBrown' to test X-ray
+The link will be similar to:
+'https://3000-stevecmd-awsbootcampcru-c7fjn6b3pzb.ws-eu107.gitpod.io/@AndrewBrown'
+This is similar to pressing the 'Home' button on the webpage then clicking on the 'logged in users name' in this example its 'Andrew Brown'
+
 Cloud watch logs can get expensive, to deactivate them revert the code above as follows:
 'home_activities.py'
 ```py
@@ -467,6 +729,8 @@ class UserActivities:
 
     return model
 ```
+
+
 Once done name the commit 'Implement cloudwatch logs' and push the changes.
 
 ## #4 ROLLBAR
@@ -580,3 +844,4 @@ The link will be similar to: 'https://4567-stevecmd-awsbootcampcru-c7fjn6b3pzb.w
 
 - The frontend - port 3000, <br />
 The link will be similar to: 'https://3000-stevecmd-awsbootcampcru-c7fjn6b3pzb.ws-eu107.gitpod.io/'
+

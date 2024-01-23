@@ -5,36 +5,48 @@ In this live session, we first created a UserPool in AWS Cognito.
 
 **Steps to setup UserPool in AWS Cognito**
 - Login to your AWS Console
-- Check your region in which you want to use your service. I personally prefer `us-east-1` region as in that region most of the services works well.
+- Check your region in which you want to use your service. I personally prefer `us-east-1` region as in that region most of the services work well.
 - Search for **Cognito** service and you will find **UserPool** tab in your left side panel.
 - After clicking on **UserPool** -> **Create UserPool**.
-- You will be displayed with a **Authentication providers** page where I chose **Username** and **Email** for Cognito user pool sign-in options -> click **Next**
-- Password Policy I kept it as **Cognito Default**.
-- Under Multi-factor authentication -> I selected **No MFA** -> **Next**
+- You will be see the **Authentication providers** page where you should choose **Username** and **Email** for Cognito user pool sign-in options -> click **Next**
+- Password Policy keep it as **Cognito Default**.
+- Under Multi-factor authentication -> Select **No MFA** -> **Next**
 - In User account recovery -> checkbox **Email only** -> **Next**
-- Under Required attributes -> I selected **Name** and **preferred username** -> **Next**
-- Then I chose **Send email with Cognito** for first time -> **Next**
-- After that you will be asked to give your User Pool Name , I gave it as **crddur-user-pool** -> under Initial app client I kept it as **Public client** -> enter app client name **(eg: cruddur)** -> **Next**
-- You will get a chance to verify all the filled details and then click on **Create User Pool**, your userpool is being created.
+- Under Sign up experience > mark the checkbox **Enable self-registration**
+- Check the checkbox marked **Allow Cognito to automatically send messages to verify and confirm**
+- Under Required attributes -> Select **Name** and **preferred username** -> **Next**
+- Then choose **Send email with Cognito** -> **Next**
+- Give your User Pool Name , Set it as **crddur-user-pool** -> under Initial app type keep it as **Public client** -> enter app client name as **cruddur** -> **Next**
+- Leave **Do not generate a client secret** checked. 
+- On the 'Review and Create page' you will then get a chance to verify all the filled in details > To proceeed click on **Create User Pool**.
+- Once created, note the 'User pool ID' and 'Client ID' for use later.
+- 'Client ID' can be found under the 'App Integration' tab.
 
-## Gitpod Code Working 
+## AWS Amplify 
+Refer to the docs at: [AWS Amplify](https://docs.amplify.aws)
 Install AWS Amplify as it is a development platform and provides you a set of pre-built UI components and Libraries. 
 ```
-cd front-react-js 
+cd frontend-react-js 
 npm i aws-amplify --save
 ```
 After installing this you will find the library `"aws-amplify": "<version>",` in the frontend-react-js directory's `package.json` file.
+<br />
+
+**Tip**
+One can also add it as a dependency in 'frontend-react-js' create the file 'requirements.txt' >
+Input the entry as: 'aws-amplify'.
+<br />
 
 **Note: make sure you are running these commands in your `frontend-react-js` directory.**
 
 ### Configure Amplify
-Add the code below in `app.js` of frontend-react-js directory.
+Add the code below in 'frontend-react-js/src/app.js`:
+
 ```js
 import { Amplify } from 'aws-amplify';
 
 Amplify.configure({
-  "AWS_PROJECT_REGION": process.env.REACT_AWS_PROJECT_REGION,
-  "aws_cognito_identity_pool_id": process.env.REACT_APP_AWS_COGNITO_IDENTITY_POOL_ID,
+  "AWS_PROJECT_REGION": process.env.REACT_APP_AWS_PROJECT_REGION,
   "aws_cognito_region": process.env.REACT_APP_AWS_COGNITO_REGION,
   "aws_user_pools_id": process.env.REACT_APP_AWS_USER_POOLS_ID,
   "aws_user_pools_web_client_id": process.env.REACT_APP_CLIENT_ID,
@@ -49,12 +61,12 @@ Amplify.configure({
 });
 ```
 
-Set the env vars below in docker-compose.yml:
+Set the env vars below in docker-compose.yml > 'frontend-react-js' > 'environment':
 ```py
-REACT_APP_AWS_PROJECT_REGION= "${AWS_DEFAULT_REGION}"
-REACT_APP_AWS_COGNITO_REGION= "${AWS_DEFAULT_REGION}"
-REACT_APP_AWS_USER_POOLS_ID= "us-east-1_XXXXXX"
-REACT_APP_CLIENT_ID= "XXXXXX"
+      REACT_APP_AWS_PROJECT_REGION: "${AWS_DEFAULT_REGION}"
+      REACT_APP_AWS_COGNITO_REGION: "${AWS_DEFAULT_REGION}"
+      REACT_APP_AWS_USER_POOLS_ID: "ca-central-1_CQ4wDfnwc"
+      REACT_APP_CLIENT_ID: "5b6ro31g97urk767adrbrdj1g5"
 ```
 
 ### Then to check the **Authentication Process** I added this code in my `HomeFeedPage.js`
@@ -104,6 +116,8 @@ React.useEffect(()=>{
   checkAuth();
 }, [])
 ```
+Commit the code as: 'Integrate Cognito'.
+
 ### To render two React components: `DesktopNavigation` and `DesktopSidebar`, passing some properties to each of them.
 ```js
 <DesktopNavigation user={user} active={'home'} setPopped={setPopped} />

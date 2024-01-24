@@ -122,7 +122,288 @@ React.useEffect(()=>{
 }, [])
 ```
 
-Commit the code as: 'Integrate Cognito'.
+Add a header to pass along the access token:
+```py
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("access_token")}`
+        },
+```
+
+The full 'HomeFeedPage.js' should now read:
+```py
+import './HomeFeedPage.css';
+import React from "react";
+
+import { Auth } from 'aws-amplify';
+
+import DesktopNavigation  from '../components/DesktopNavigation';
+import DesktopSidebar     from '../components/DesktopSidebar';
+import ActivityFeed from '../components/ActivityFeed';
+import ActivityForm from '../components/ActivityForm';
+import ReplyForm from '../components/ReplyForm';
+
+// [TODO] Authenication
+import Cookies from 'js-cookie'
+
+export default function HomeFeedPage() {
+  const [activities, setActivities] = React.useState([]);
+  const [popped, setPopped] = React.useState(false);
+  const [poppedReply, setPoppedReply] = React.useState(false);
+  const [replyActivity, setReplyActivity] = React.useState({});
+  const [user, setUser] = React.useState(null);
+  const dataFetchedRef = React.useRef(false);
+
+  const loadData = async () => {
+    try {
+      const backend_url = `${process.env.REACT_APP_BACKEND_URL}/api/activities/home`
+      const res = await fetch(backend_url, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("access_token")}`
+        },
+        method: "GET"
+      });
+      let resJson = await res.json();
+      if (res.status === 200) {
+        setActivities(resJson)
+      } else {
+        console.log(res)
+      }
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  const checkAuth = async () => {
+    Auth.currentAuthenticatedUser({
+      // Optional, By default is false. 
+      // If set to true, this call will send a 
+      // request to Cognito to get the latest user data
+      bypassCache: false 
+    })
+    .then((user) => {
+      console.log('user',user);
+      return Auth.currentAuthenticatedUser()
+    }).then((cognito_user) => {
+        setUser({
+          display_name: cognito_user.attributes.name,
+          handle: cognito_user.attributes.preferred_username
+        })
+    })
+    .catch((err) => console.log(err));
+  };
+  
+  React.useEffect(()=>{
+    //prevents double call
+    if (dataFetchedRef.current) return;
+    dataFetchedRef.current = true;
+
+    loadData();
+    checkAuth();
+  }, [])
+
+  return (
+    <article>
+      <DesktopNavigation user={user} active={'home'} setPopped={setPopped} />
+      <div className='content'>
+        <ActivityForm  
+          popped={popped}
+          setPopped={setPopped} 
+          setActivities={setActivities} 
+        />
+        <ReplyForm 
+          activity={replyActivity} 
+          popped={poppedReply} 
+          setPopped={setPoppedReply} 
+          setActivities={setActivities} 
+          activities={activities} 
+        />
+        <ActivityFeed 
+          title="Home" 
+          setReplyActivity={setReplyActivity} 
+          setPopped={setPoppedReply} 
+          activities={activities} 
+        />
+      </div>
+      <DesktopSidebar user={user} />
+    </article>
+  );
+}
+```
+In the app.py after 'origins = [frontend, backend]' around line 82 we need to update CORS:
+```py
+cors = CORS(
+  app, 
+  resources={r"/api/*": {"origins": origins}},
+  headers=['Content-Type', 'Authorization'], 
+  expose_headers='Authorization',
+  methods="OPTIONS,GET,HEAD,POST"
+)
+```
+
+At around line 157 lets enable logging so that we can get debugging info, change the 'data_home' function to read:
+```py
+@app.route("/api/activities/home", methods=['GET'])
+@xray_recorder.capture('activities_home')
+def data_home():
+  data = HomeActivities.run()
+  return data, 200
+```
+Once your able to see the logs revert the code to:
+```py
+@xray_recorder.capture('activities_home')
+def data_home():
+  data = HomeActivities.run()
+  return data, 200
+```
+We should pass the headers to the backend. File: 'backend-flask' > 'app.py':
+Add 'import sys'
+
+Create the following: 'backend-flask/lib/cognito_jwt_token.py' and place the code below in the file:
+```py
+import time
+import requests
+from jose import jwk, jwt
+from jose.exceptions import JOSEError
+from jose.utils import base64url_decode
+
+class FlaskAWSCognitoError(Exception):
+  pass
+
+class TokenVerifyError(Exception):
+  pass
+
+def extract_access_token(request_headers):
+    access_token = None
+    auth_header = request_headers.get("Authorization")
+    if auth_header and " " in auth_header:
+        _, access_token = auth_header.split()
+    return access_token
+
+class CognitoJwtToken:
+    def __init__(self, user_pool_id, user_pool_client_id, region, request_client=None):
+        self.region = region
+        if not self.region:
+            raise FlaskAWSCognitoError("No AWS region provided")
+        self.user_pool_id = user_pool_id
+        self.user_pool_client_id = user_pool_client_id
+        self.claims = None
+        if not request_client:
+            self.request_client = requests.get
+        else:
+            self.request_client = request_client
+        self._load_jwk_keys()
+
+
+    def _load_jwk_keys(self):
+        keys_url = f"https://cognito-idp.{self.region}.amazonaws.com/{self.user_pool_id}/.well-known/jwks.json"
+        try:
+            response = self.request_client(keys_url)
+            self.jwk_keys = response.json()["keys"]
+        except requests.exceptions.RequestException as e:
+            raise FlaskAWSCognitoError(str(e)) from e
+
+    @staticmethod
+    def _extract_headers(token):
+        try:
+            headers = jwt.get_unverified_headers(token)
+            return headers
+        except JOSEError as e:
+            raise TokenVerifyError(str(e)) from e
+
+    def _find_pkey(self, headers):
+        kid = headers["kid"]
+        # search for the kid in the downloaded public keys
+        key_index = -1
+        for i in range(len(self.jwk_keys)):
+            if kid == self.jwk_keys[i]["kid"]:
+                key_index = i
+                break
+        if key_index == -1:
+            raise TokenVerifyError("Public key not found in jwks.json")
+        return self.jwk_keys[key_index]
+
+    @staticmethod
+    def _verify_signature(token, pkey_data):
+        try:
+            # construct the public key
+            public_key = jwk.construct(pkey_data)
+        except JOSEError as e:
+            raise TokenVerifyError(str(e)) from e
+        # get the last two sections of the token,
+        # message and signature (encoded in base64)
+        message, encoded_signature = str(token).rsplit(".", 1)
+        # decode the signature
+        decoded_signature = base64url_decode(encoded_signature.encode("utf-8"))
+        # verify the signature
+        if not public_key.verify(message.encode("utf8"), decoded_signature):
+            raise TokenVerifyError("Signature verification failed")
+
+    @staticmethod
+    def _extract_claims(token):
+        try:
+            claims = jwt.get_unverified_claims(token)
+            return claims
+        except JOSEError as e:
+            raise TokenVerifyError(str(e)) from e
+
+    @staticmethod
+    def _check_expiration(claims, current_time):
+        if not current_time:
+            current_time = time.time()
+        if current_time > claims["exp"]:
+            raise TokenVerifyError("Token is expired")  # probably another exception
+
+    def _check_audience(self, claims):
+        # and the Audience  (use claims['client_id'] if verifying an access token)
+        audience = claims["aud"] if "aud" in claims else claims["client_id"]
+        if audience != self.user_pool_client_id:
+            raise TokenVerifyError("Token was not issued for this audience")
+
+    def verify(self, token, current_time=None):
+        """ https://github.com/awslabs/aws-support-tools/blob/master/Cognito/decode-verify-jwt/decode-verify-jwt.py """
+        if not token:
+            raise TokenVerifyError("No token provided")
+
+        headers = self._extract_headers(token)
+        pkey_data = self._find_pkey(headers)
+        self._verify_signature(token, pkey_data)
+
+        claims = self._extract_claims(token)
+        self._check_expiration(claims, current_time)
+        self._check_audience(claims)
+
+        self.claims = claims 
+        return claims
+```
+Add the 'Flask-AWSCognito' dependency to 'backend-flask/requirements.txt'
+Install the dependencies by running the code below from within 'backend-flask':
+`pip install -r requirements.txt`
+At this point requirements.txt contains:
+```txt
+flask
+flask-cors
+
+opentelemetry-api 
+opentelemetry-sdk 
+opentelemetry-exporter-otlp-proto-http 
+opentelemetry-instrumentation-flask 
+opentelemetry-instrumentation-requests
+
+aws-xray-sdk
+
+watchtower
+
+blinker
+rollbar
+
+Flask-AWSCognito
+```
+In our docker-compose.yml file, add the followingas environment variables of backend-flask:
+```txt
+      AWS_COGNITO_USER_POOL_ID: "<user-pool-ID eg us-east-1_XXX>"
+      AWS_COGNITO_USER_POOL_CLIENT_ID: "<Insert your client ID>" 
+```
+In 'app.py' add the import 'from lib.cognito_jwt_token import CognitoJwtToken, extract_access_token, TokenVerifyError' 
 
 ### Refactor 'DesktopSidebar.js': path: 'frontend-react-js/src/components/DesktopSidebar.js'
 ```py
@@ -261,7 +542,7 @@ Overall, this code provides a simple and straightforward way to sign out a user 
 
 ## Sign-in Page, Sign-out Page and Confirmation Page
 ### Implementation of the sign in page. 
-From the **signinpage.js** located at: 'frontend-react-js/src/pages/SigninPage.js', remove the following code
+From the **SigninPage.js** located at: 'frontend-react-js/src/pages/SigninPage.js', remove the following code
 ```
 import Cookies from 'js-cookie'
 
@@ -308,7 +589,7 @@ const onsubmit = async (event) => {
   }
 ```
 
-The full Sign in Page should now be similar to:
+The full 'SigninPage.js' should now be similar to:
 ```py
 import './SigninPage.css';
 import React from "react";
@@ -701,3 +982,4 @@ const onsubmit = async (event) => {
   aws cognito-idp admin-set-user-password --username nameofusername --password Testing1234! --user-pool-id "${AWS_USER_POOLS_ID}" --permanent
 ```
 
+Check commits saved as 'implement backend check for the token' in week 3 again

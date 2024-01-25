@@ -982,4 +982,142 @@ const onsubmit = async (event) => {
   aws cognito-idp admin-set-user-password --username nameofusername --password Testing1234! --user-pool-id "${AWS_USER_POOLS_ID}" --permanent
 ```
 
-Check commits saved as 'implement backend check for the token' in week 3 again
+**Improving UI Contrast and Implementing CSS Variables for Theming**
+Change the background color:
+'frontend-react-js' > 'src' > 'index.css'
+```
+html,body { 
+  height: 100%; 
+  width: 100%; 
+  background: rgb(61,13,123);
+}
+```
+Change the line color between posts:
+'frontend-react-js' > 'src' > 'components' > 'ActivityItem.css'
+```
+.activity_item {
+  display: flex;
+  flex-direction: column;
+  border-bottom: solid 1px rgb(247,230,255);
+  # border-bottom: solid 1px rgb(60,54,79);
+  overflow: hidden;
+  padding: 16px;
+}
+```
+
+Change the hover color:
+'frontend-react-js' > 'src' > 'components' > 'DesktopSidebar.css'
+```
+section footer a {
+  text-decoration: none;
+  color: rgba(255,255,255,0.5);
+  font-size: 14px;
+}
+```
+**Setting variables**
+File: 'frontend-react-js' > 'src' > 'index.css'
+Declare variables at the top of the file:
+```
+:root {
+  --bg: rgb(61,13,123);
+  --fg: rgb(8,1,14);
+
+  --field-border: rgb(255,255,255,0.29);
+  --field-border-focus: rgb(149,0,255,1);
+  --field-bg: rgb(31,31,31);
+}
+```
+
+Reference the color as shown:
+```
+html,body { 
+  height: 100%; 
+  width: 100%; 
+  background: var(--bg);
+}
+```
+File: 'frontend-react-js' > 'src' > 'components' > 'JoinSection.css'
+```
+.join {
+  display: flex;
+  flex-direction: column;
+  background: var(--fg);
+  border-radius: 8px;
+  margin-top: 24px;
+}
+```
+File: 'frontend-react-js' > 'src' > 'App.css'
+```
+.content {
+  width: 600px;
+  height: 100%;
+  background: var(--fg);
+}
+```
+File: 'frontend-react-js' > 'src' > 'components' > 'Search.css'
+```
+.search_field input[type='text'] {
+  border: solid 1px var(--field-border);
+  background: var(--field-bg);
+  padding: 16px;
+  font-size: 16px;
+  border-radius: 8px;
+  width: 100%;
+  outline: none;
+  color: #fff;
+}
+.search_field input[type='text']:focus {
+  border: solid 1px var(--field-border-focus)
+}
+```
+
+File: 'frontend-react-js' > 'src' > 'pages' > 'SignupPage.css'
+```
+article.signup-article input[type='password'] {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 16px;
+  border-radius: 4px;
+  border: none;
+  outline: none;
+  display: block;
+  outline: none;
+  resize: none;
+  width: 100%;
+  padding: 16px;
+  border: solid 1px var(--field-border);
+  background: #1f1f1f;
+  color: #fff;
+}
+```
+and
+
+```
+article.signup-article input[type='password']:focus {
+  border: solid 1px var(--field-border-focus);
+}
+```
+
+File: 'frontend-react-js' > 'src' > 'pages' > 'SigninPage.css'
+```
+article.signin-article input[type='password'] {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 16px;
+  border-radius: 4px;
+  border: none;
+  outline: none;
+  display: block;
+  outline: none;
+  resize: none;
+  width: 100%;
+  padding: 16px;
+  border: solid 1px var(--field-border);
+  background: var(--field-bg);
+  color: #fff;
+}
+```
+and
+```
+article.signin-article input[type='password']:focus {
+  border: solid 1px var(--field-border-focus);
+}
+```

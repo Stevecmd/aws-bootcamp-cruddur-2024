@@ -2,8 +2,9 @@
 
 **Set up RDS Instance**
 
-* Run the following code in the CLI:
+* Run the following code in the CLI: <br>
 Make sure to change the name(**identifier**), password and zone.
+
 ```
 aws rds create-db-instance \
   --db-instance-identifier cruddur-db-instance \
@@ -27,7 +28,7 @@ aws rds create-db-instance \
 ```
 Once the commands run, confirm creation on the web interface.
 
-Postgres should already be setup but check 'docker-compose.yml' to confirm that the following code exists:
+Postgres should already be setup but check `docker-compose.yml` to confirm that the following code exists:
 ```
   db:
     image: postgres:13-alpine
@@ -40,7 +41,7 @@ Postgres should already be setup but check 'docker-compose.yml' to confirm that 
     volumes: 
       - db:/var/lib/postgresql/data
 ```
-**Tip** Comment out DynamoDB as it is not necessary atm:
+**Tip**: Comment out DynamoDB as it is not necessary atm:
 ```
   #dynamodb-local:
     ## https://stackoverflow.com/questions/67533058/persist-local-dynamodb-data-in-volumes-lack-permission-unable-to-open-databa
@@ -56,9 +57,9 @@ Postgres should already be setup but check 'docker-compose.yml' to confirm that 
     #working_dir: /home/dynamodblocal
 ```
 Once RDS is running, stop it temporarily using the Console.
-**NB** It will automatically restart after 7 days.
+<br>**NB** It will automatically restart after 7 days.
 
-Do docker-compose up to check if we can connect to Postgres.
+Run `docker-compose up` to check if we can connect to Postgres. <br>
 On Gitpod, Check if the Postgres container is running.
 
 Connect to Postgres locally, using the command below:
@@ -91,7 +92,7 @@ DELETE FROM table_name WHERE condition; -- Delete data from a table
 
 #### PSQL Database
 
-Once we are logged into the local PSQL database, we create a database named cruddur using the command below. 
+Once we are logged into the local PSQL database, we create a database named `cruddur` using the command below. 
 
 ```sql
 CREATE database cruddur;
@@ -110,19 +111,22 @@ exit from the psql command by typing the following command:
 \q
 ```
 
-After this, from the postgres:bash terminal, in the root directory ie 'aws-bootcamp-cruddur-2024/backend-flask' run: 
+After this, from the `postgres:bash` terminal, in the root directory ie `aws-bootcamp-cruddur-2024/backend-flask` run <br>
+The code below when asked for a pasword type: 'password'. 
+<br>
 
 ```
 psql cruddur < db/schema.sql -h localhost -U postgres
 ```
-When asked for a pasword type: 'password'.
 
+<br>
 This created the extension needed. 
 
-To make doing this easier, we created a 'connection url string' to provide all thed details that are needed to connect to our database.
-Make sure to replace '<password>' with your actual password for the postgres DB.
+To make doing this easier, we created a `connection url string` to provide all thed details that are needed to connect to our database. <br>
+Make sure to replace '<password>' with your actual password for the postgres DB. <br>
 **NB** Our local username is 'postgres'.
 
+<br>
 The format for a connection url string for a Postgres database is the following: 
 
 ```
@@ -133,7 +137,7 @@ test the connection by running:
 ```
 psql postgresql://postgres:<password>@localhost:5432/cruddur
 ```
-If it connects then the code is valid, exit out '\q' and run the code below:
+If it connects then the code is valid, exit out `\q` and run the code below:
 ```
 export CONNECTION_URL="postgresql://postgres:<password>@localhost:5432/cruddur"
 gp env CONNECTION_URL="postgresql://postgres:<password>@localhost:5432/cruddur"
@@ -143,9 +147,9 @@ test the connection by running:
 psql $CONNECTION_URL
 ```
 
-We then created a connection url string for our production RDS database as well, then set the environment variable there too.
-In the code below, retrieve the endpoint and port from the console on 'RDS' > 'Databases' > 'Connectivity and security'.
-Replace 'thisisntmyproductionpassword' with your actual password.
+We then created a connection url string for our production RDS database as well, then set the environment variable there too. <br>
+In the code below, retrieve the endpoint and port from the console on `RDS` > `Databases` > `Connectivity and security`.
+Replace `thisisntmyproductionpassword` with your actual `password`.
 ```
 export PROD_CONNECTION_URL="postgresql://root:goodDatabasePassword1@cruddur-db-instance.c8ersdfsdf.us-east-1.rds.amazonaws.com:5432/cruddur"
 gp env PROD_CONNECTION_URL="postgresql://root:goodDatabasePassword1@cruddur-db-instance.c8ersdfsdf.us-east-1.rds.amazonaws.com:5432/cruddur"
@@ -153,24 +157,28 @@ gp env PROD_CONNECTION_URL="postgresql://root:goodDatabasePassword1@cruddur-db-i
 
 ## Bash scripting for common database actions
 
-We then created a new folder in 'backend-flask' named 'bin' which stands for binary. In this folder, we can store bash scripts to execute commands on our database. We then made several new files: 'db-create', 'db-drop', 'db-schema-load'.
+We then created a new folder in 'backend-flask' named 'bin' which stands for binary. <br> 
+In this folder, we can store bash scripts to execute commands on our database. <br> 
+We then made several new files: `db-create`, `db-drop`, `db-schema-load`.
 
 For each of the files add a shebang to instruct our app to treat the file as a bash script:
 
 ```
 #! /user/bin/bash
 ```
-From the 'Backend-flask' folder, make our new files executable by running 'chmod u+x bin/db-create', 'chmod u+x bin/db-drop', 'chmod u+x bin/db-schema-load'
-We started off testing if we can drop our database. To do this, add the code below to 'db-drop'.
+From the `Backend-flask` folder, make our new files executable by running `chmod u+x bin/db-create`, `chmod u+x bin/db-drop`, `chmod u+x bin/db-schema-load`
+<br>
+We started off testing if we can drop our database. To do this, add the code below to `db-drop`.
 
 ```
 psql $CONNECTION_URL -c "drop database cruddur;'
 ```
 
-This command should psql connect to our local Postgres database using our connection string url, then using '-c' it issues a SQL command of "drop database cruddur;"
+This command should psql connect to our local Postgres database using our connection string url, then using `-c` it issues a SQL command of `drop database cruddur;`
 
+<br>
 Proceed to edit the files as follows:
-
+<br>
 > DB-create
 ```
 #! /usr/bin/bash
@@ -180,6 +188,7 @@ echo "db-create"
 NO_DB_CONNECTION_URL=$(sed 's/\/cruddur//g' <<<"$CONNECTION_URL")
 psql $NO_DB_CONNECTION_URL -c "CREATE database cruddur;"
 ```
+<br>
 > DB-Drop
 ```
 #! /usr/bin/bash
@@ -190,6 +199,7 @@ NO_DB_CONNECTION_URL=$(sed 's/\/cruddur//g' <<<"$CONNECTION_URL")
 psql $NO_DB_CONNECTION_URL -c "DROP database cruddur;"
 ```
 
+<br>
 > DB-Schema-load
 
 ```
@@ -202,11 +212,13 @@ echo $schema_path
 
 psql $CONNECTION_URL cruddur < $schema_path
 ```
+<br>
 To execute a file run:
 './bin/<file-name>' eg './bin/db-create'
 
-We need a way to determine when we're running from our production environment (prod) or our local Postgres environment. To do this, we added an if statement to the code.
-Below is the code for 'schema-load'.
+We need a way to determine when we're running from our production environment (prod) or our local Postgres environment. <br>
+To do this, we added an if statement to the code.
+Below is the code for `schema-load`.
 ```
 #! /usr/bin/bash
 
@@ -230,9 +242,10 @@ fi
 psql $URL cruddur < $schema_path
 ```
 
-The additional code under our shebang was to provide a different color through the CLI when viewing our Postgres logs, so that we can see it when ran. We went through and added it to our other bash scripts as well. 
+The additional code under our shebang customizes the color when viewing our Postgres logs through the CLI. <br>
+Add it to the other bash scripts as well. 
 
-Back on our main task of adding tables to our database, we go back to our schema.sql, and add SQL commands to create our tables and activities:
+Back to adding tables to our database, we go back to our `schema.sql`, and add SQL commands to create our tables and activities:
 
 ```sql
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -261,7 +274,9 @@ CREATE TABLE public.activities (
 );
 ```
 ### `./bin/db-connect` to connect to our DB
-We then made a new bash script named 'db-connect' inside the bin folder './bin/db-connect', made it executable by running 'chmod u+x ./bin/db-connect' then ran the file.
+We then made a new bash script named `db-connect` inside the bin folder `./bin/db-connect`, made it executable by running `chmod u+x ./bin/db-connect` then run the file. 
+<br>
+
 The file contains:
 ```sh
 #! /usr/bin/bash
@@ -276,7 +291,8 @@ fi
 psql $URL
 ```
 
-We were able to successfully connect to our local Postgres database using this bash script. We then ran '\dt' from the Postgres database to view our tables.
+You should be able to successfully connect to the local Postgres database using this bash script. <br>
+Run `\dt` from the Postgres database to view the tables.
 
 ### `./bin/db-create` to create a new table 'cruddur'
 ```
@@ -327,14 +343,15 @@ fi
 
 psql $URL cruddur < $schema_path
 ```
-**NB** '$(realpath .)' is used to get the actual path of a specified file.
+**NB** 
+- '$(realpath .)' is used to get the actual path of a specified file.
 - For example the code below reveals the path of 'schema.sql'
-- To print colors in Bash we use codes fore example: ''\033[1;36m''
 ```
 schema_path="$(realpath .)/db/schema.sql"
 echo $schema_path
 ```
-
+- To print colors in Bash we use codes fore example: ''\033[1;36m''
+  
 ### `./bin/db-seed` to insert the data into schema loaded:
 ```
 #! /usr/bin/bash
@@ -352,7 +369,7 @@ echo $seed_path
 psql $CONNECTION_URL cruddur < $seed_path
 
 ```
-This db-seed script will run our 'seed.sql' file that we created in 'backend-flask/db' which contains: 
+This db-seed script will run our `seed.sql` file that we created in `backend-flask/db` which contains: 
 
 ```sql
 -- this file was manually created
@@ -379,13 +396,13 @@ aws ec2 modify-security-group-rules \
     --security-group-rules "SecurityGroupRuleId=$DB_SG_RULE_ID,SecurityGroupRule={IpProtocol=tcp,FromPort=5432,ToPort=5432,CidrIpv4=$GITPOD_IP/32}"
 ```
 
-To connect to 'PROD' environment, you can affix the command with PROD to our scripts eg. `./bin/db-connect prod`
+To connect to the `PROD` environment, you can affix the command with PROD to the scripts eg. `./bin/db-connect prod`
 
 
 ## Install Postgres Driver in Backend Application
 ### db-sessions
-We may need to see what connections are being used to our Postgres database. For this, we implement 'db-sessions' and make it executable.
-create a file called 'db-sessions' under 'backend-flask/bin'
+We may need to see what connections are being used to our Postgres database. For this, we implement `db-sessions` and make it executable. <br>
+Create a file called `db-sessions` under `backend-flask/bin`
 
 ```
 #! /usr/bin/bash
@@ -414,9 +431,9 @@ from pg_stat_activity;"
  chmod u+x ./db-sessions
 ```
 
-When we run this, we're able to see the active connections to our database, and close unnecessary connections. 
+Run this, to see the active connections to the database, and close unnecessary connections. 
 
-We then create a script to run all of our commands, so that we don't have to run them individually. We create 'db-setup' and make it executable.
+We then create a script to run all of our commands, so that we don't have to run them individually. We create `db-setup` and made it executable.
 
 ### db-setup
 ```
@@ -439,20 +456,25 @@ source "$bin_path/db-seed"
  chmod u+x ./db-setup
 ```
 ## Install the Postgres Driver
-With that setup, now we could now install the Postgres driver in our Backend application. We're going to use an AWS Lambda to to insert users into our database. Since AWS lacks the required PostgreSQL libraries in the AMI image, we must run the Postgres driver, custom compliled Psycopg2 C library for Python. To implement this, we add to the following libraries to our requirements.txt file. 
+With that setup, now we could now install the Postgres driver in our Backend application. <br> 
+We're going to use an AWS Lambda to to insert users into our database. <br> 
+We need to add PostgreSQL libraries as a dependency to run the Postgres driver and the `Psycopg2 C library for Python`. <br> 
+To implement this, add the following libraries to the requirements.txt file. 
 
 ```
 psycopg[binary]
 psycopg[pool]
 ```
 
-We then do a 'pip install -r requirements.txt' to install the drivers. 
+Run `pip install -r requirements.txt` to install the drivers. 
 
 ## Connect Gitpod to RDS Instance
 
-We're going to have to use pooling as a way of dealing with connections to our database. There's a certain amount of connections your database can handle in relational databases. There's concurrent connections, where some are running, some aren't. These connection pools allow us to re-use connections with concurrent connections. Since we're running Lambda functions, if our app became widely popular, we'd need to use a proxy, as Lambda functions create new functions each time it's ran, which could become expensive.
+We're going to have to use pooling as a way of dealing with connections to our database. There's a certain amount of connections your database can handle in relational databases. <br>
+There's concurrent connections, where some are running, some aren't. These connection pools allow us to re-use connections with concurrent connections. <br>
+Because we're running Lambda functions, if our app became widely popular, we'd need to use a proxy because Lambda functions create new functions each time they run, which could become **expensive**.
 
-To create our connection pool, we create a new file in 'backend-flask/lib' named 'db.py'
+To create our connection pool, we create a new file in `backend-flask/lib` named `db.py`
 
 ```py
 from psycopg_pool import ConnectionPool

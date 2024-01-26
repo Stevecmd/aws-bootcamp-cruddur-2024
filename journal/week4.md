@@ -549,11 +549,11 @@ After working through some SQL errors, we pointed our attention back towards RDS
 psql $PROD_CONNECTION_URL
 ```
 
-From the terminal, we run 'curl ifonfig.me' which outputs our Gitpod IP address. We next passed GITPOD_IP=$(curl ifconfig.me) as variable so we can grab GITPOD_IP for RDS whenever needed. This allowed us to store our current IP address as an environment variable. 
+From the terminal, we run `curl ifonfig.me` which outputs our Gitpod IP address. We next passed `GITPOD_IP=$(curl ifconfig.me)` as variable so that we can grab the GITPOD_IP for RDS whenever needed. This allows us to store our current IP address as an environment variable. 
 
-We again test the 'psql' command above, this time it works. Since our IP is going to update everytime we launch our workspace, we will need to manually update that IP stored by the inbound rule everytime as well.
+We again test the `psql` command above, this time it works. Since our IP is going to update everytime we launch our workspace, we will need to manually update that IP stored by the inbound rule everytime as well.
 
-There's several env variables we then set after this, passing our security group id and our security group rule id as variables: DB_SG_ID and DB_SG_RULE_ID
+There's several env variables we then set after this, passing our security group id and our security group rule id as variables: `DB_SG_ID` and `DB_SG_RULE_ID`
 
 ```sh
 export DB_SG_ID="sg-12345"
@@ -561,13 +561,13 @@ gp env DB_SG_ID="sg-12345"
 export DB_SG_RULE_ID="sgr-12345"
 gp env DB_SG_RULE_ID="sgr-12345"
 ```
-Since the ip address changes everytime, you need to change the ip on the security group of the rds instance here is the script to add to the file rds-update-sg-rule under bin:
+Since the ip address changes everytime, you need to change the ip on the security group of the rds instance here is the script to add to the file `rds-update-sg-rule` under `bin`:
 ```py
 aws ec2 modify-security-group-rules \
     --group-id $DB_SG_ID \
     --security-group-rules "SecurityGroupRuleId=$DB_SG_RULE_ID,SecurityGroupRule={Description=GITPOD,IpProtocol=tcp,FromPort=5432,ToPort=5432,CidrIpv4=$GITPOD_IP/32}"
 ```
-We also store our env var in '.gitpod.yml' as well as create a new bash script named `rds-update-sg-rule` to run every time our environment launches:
+We also store our env var in `.gitpod.yml` as well as create a new bash script named `rds-update-sg-rule` to run every time our environment launches:
 
 ```yml
   - name: postgres
@@ -649,7 +649,7 @@ def lambda_handler(event, context):
     return event
 ```
 
-The env var for the lambda will be **CONNECTION_URL** which has the variable of the **PROD_CONNECTION_URL** set on gitpod/codespace (example: PROD_CONNECTION_URL="postgresql://userofthedb:masterpassword@endpointofthedb:5432/cruddur)
+The env var for the lambda will be **CONNECTION_URL** which has the variable of the **PROD_CONNECTION_URL** set on gitpod/codespace example: `PROD_CONNECTION_URL="postgresql://userofthedb:masterpassword@endpointofthedb:5432/cruddur`
 
 Once you create the env var, create also the layer>add layers> select specify arn:
 ```

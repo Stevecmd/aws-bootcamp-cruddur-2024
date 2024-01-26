@@ -111,8 +111,8 @@ exit from the psql command by typing the following command:
 \q
 ```
 
-After this, from the `postgres:bash` terminal, in the root directory ie `aws-bootcamp-cruddur-2024/backend-flask` run <br>
-The code below when asked for a pasword type: 'password'. 
+After this, from the `postgres:bash` terminal, in the root directory ie `aws-bootcamp-cruddur-2024/backend-flask` run 
+the code below, input pasword as: `password`. 
 <br>
 
 ```
@@ -178,7 +178,7 @@ This command should psql connect to our local Postgres database using our connec
 
 <br>
 Proceed to edit the files as follows:
-<br>
+
 > DB-create
 ```
 #! /usr/bin/bash
@@ -188,7 +188,6 @@ echo "db-create"
 NO_DB_CONNECTION_URL=$(sed 's/\/cruddur//g' <<<"$CONNECTION_URL")
 psql $NO_DB_CONNECTION_URL -c "CREATE database cruddur;"
 ```
-<br>
 > DB-Drop
 ```
 #! /usr/bin/bash
@@ -199,7 +198,6 @@ NO_DB_CONNECTION_URL=$(sed 's/\/cruddur//g' <<<"$CONNECTION_URL")
 psql $NO_DB_CONNECTION_URL -c "DROP database cruddur;"
 ```
 
-<br>
 > DB-Schema-load
 
 ```
@@ -212,9 +210,8 @@ echo $schema_path
 
 psql $CONNECTION_URL cruddur < $schema_path
 ```
-<br>
 To execute a file run:
-'./bin/<file-name>' eg './bin/db-create'
+`./bin/<file-name>' eg './bin/db-create`
 
 We need a way to determine when we're running from our production environment (prod) or our local Postgres environment. <br>
 To do this, we added an if statement to the code.
@@ -345,12 +342,12 @@ psql $URL cruddur < $schema_path
 ```
 **NB** 
 - '$(realpath .)' is used to get the actual path of a specified file.
-- For example the code below reveals the path of 'schema.sql'
+- For example the code below reveals the path of `schema.sql`
 ```
 schema_path="$(realpath .)/db/schema.sql"
 echo $schema_path
 ```
-- To print colors in Bash we use codes fore example: ''\033[1;36m''
+- To print colors in Bash we use codes for example: `'\033[1;36m'`
   
 ### `./bin/db-seed` to insert the data into schema loaded:
 ```
@@ -570,7 +567,7 @@ aws ec2 modify-security-group-rules \
     --group-id $DB_SG_ID \
     --security-group-rules "SecurityGroupRuleId=$DB_SG_RULE_ID,SecurityGroupRule={Description=GITPOD,IpProtocol=tcp,FromPort=5432,ToPort=5432,CidrIpv4=$GITPOD_IP/32}"
 ```
-We also store our env var in '.gitpod.yml' as well as create a new bash script named 'rds-update-sg-rule' to run every time our environment launches:
+We also store our env var in '.gitpod.yml' as well as create a new bash script named `rds-update-sg-rule` to run every time our environment launches:
 
 ```yml
   - name: postgres
@@ -600,14 +597,14 @@ aws ec2 modify-security-group-rules \
     --security-group-rules "SecurityGroupRuleId=$DB_SG_RULE_ID,SecurityGroupRule={Description=GITPOD,IpProtocol=tcp,FromPort=5432,ToPort=5432,CidrIpv4=$GITPOD_IP/32}"
 ```
 
-After confirming connection to RDS from Gitpod, modified docker-compose.yml to pass a different env var for CONNECTION_URL. 
+After confirming connection to RDS from Gitpod, modified `docker-compose.yml` to pass a different env var for CONNECTION_URL. 
 
 ```yml
 CONNECTION_URL: "${PROD_CONNECTION_URL}"
 ```
 
 # Create Lambda
-Create a lambda in the region where are your services and create the same file under aws/lambdas calling the file cruddur-post-confirmation.py
+Create a lambda in the region where are your services and create the same file under `aws/lambdas` calling the file `cruddur-post-confirmation.py`
 
 ```
 import json
@@ -652,20 +649,21 @@ def lambda_handler(event, context):
     return event
 ```
 
-the env var for the lambda will be **CONNECTION_URL** which has the variable of the **PROD_CONNECTION_URL** set on gitpod/codespace (example: PROD_CONNECTION_URL="postgresql://userofthedb:masterpassword@endpointofthedb:5432/cruddur)
+The env var for the lambda will be **CONNECTION_URL** which has the variable of the **PROD_CONNECTION_URL** set on gitpod/codespace (example: PROD_CONNECTION_URL="postgresql://userofthedb:masterpassword@endpointofthedb:5432/cruddur)
 
-Once you create the env var, create also the layer>add layers> select specify arn
+Once you create the env var, create also the layer>add layers> select specify arn:
 ```
-arn:aws:lambda:your region:898466741470:layer:psycopg2-py38:1
+arn:aws:lambda:<region>:<account-number>:layer:psycopg2-py38:1
 ```
 
-now it is time to create the trigger for cognito.
-from cognito,  select the user pool and go to the user pool properties to find the lambda triggers. follow the configuration according to the image below:
+## Create Cognito trigger.
+From cognito, select the user pool and go to the user pool properties to find the lambda triggers. Follow the configuration according to the image below:
 
 ![lambda triggers](https://github.com/dontworryjohn/aws-bootcamp-cruddur-2023/blob/main/images/lambda%20triggers.png)
 
 Make sure to attach the following policy **AWSLambdaVPCAccessExecutionRole** to the lambda role by going to configuration>permission> link under the Role name.
 
-Once attached the policy, go to VPC and select the VPC where resides the RDS,
-the subnet mask (i suggest selecting just 1 as you could have timeout error during the execution of the lambda) and select the same security group of the rds. In my case i took the default vpc for my region as i deployed there, the subnetmask in my case eu-west-2a (make sure to verify where reside your rds by going to EC2>Network Interface under network & security)
-and security group please make sure to insert the new inbound rule.
+Once you attach the policy, go to VPC and: 
+- select the VPC where RDS resides,
+- the subnet mask (select only one to enable fast lambda processing) and
+- select the same security group of the rds. 

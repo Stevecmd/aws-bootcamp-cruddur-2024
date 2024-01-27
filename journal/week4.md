@@ -97,14 +97,14 @@ Once we are logged into the local PSQL database, we create a database named `cru
 ```sql
 CREATE database cruddur;
 ```
-Type '\l' to confirm that the database has been created.
-In 'backend-flask', create a folder called db and inside a file called 'schema.sql'
-and insert the following code into the 'schema.sql'.
+Type `\l` to confirm that the database has been created.
+In `backend-flask`, create a folder called `db` and inside create a file `schema.sql`
+and insert the following code into the it.
 
 ```sql
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 ```
-**NB** UUID - universally unique identifiers
+**NB** `UUID` - Universally unique identifiers.
 
 exit from the psql command by typing the following command:
 ```
@@ -124,7 +124,7 @@ This created the extension needed.
 
 To make doing this easier, we created a `connection url string` to provide all thed details that are needed to connect to our database. <br>
 Make sure to replace '<password>' with your actual password for the postgres DB. <br>
-**NB** Our local username is 'postgres'.
+**NB**:  Our local username is `postgres`.
 
 <br>
 The format for a connection url string for a Postgres database is the following: 
@@ -398,7 +398,9 @@ To connect to the `PROD` environment, you can affix the command with PROD to the
 
 ## Install Postgres Driver in Backend Application
 ### db-sessions
-We may need to see what connections are being used to our Postgres database. For this, we implement `db-sessions` and make it executable. <br>
+We may need to see which connections are running on our Postgres database in order to perform some actions eg `db-drop`.
+<br>
+For this, we implement `db-sessions` and make it executable. <br>
 Create a file called `db-sessions` under `backend-flask/bin`
 
 ```
@@ -463,7 +465,8 @@ psycopg[binary]
 psycopg[pool]
 ```
 
-Run `pip install -r requirements.txt` to install the drivers. 
+Run `pip install -r requirements.txt` to install the drivers. <br>
+Ref: `psycopg.org`
 
 ## Connect Gitpod to RDS Instance
 
@@ -497,16 +500,21 @@ connection_url = os.getenv("CONNECTION_URL")
 pool = ConnectionPool(connection_url)
 ```
 
-We open docker-compose.yml and add an environment variable for our CONNECTION_URL.
+We open `docker-compose.yml` and add an environment variable for our `CONNECTION_URL` within `backend-flask` > `environment`.
 
+```yml
+      CONNECTION_URL: "${CONNECTION_URL}"
+      # CONNECTION_URL: "postgresql://postgres:password@db:5432/cruddur"
+```
+If it doesnt work use the code below:
 ```yml
 CONNECTION_URL: "postgresql://postgres:password@localhost:5432/cruddur"
 ```
 
-Next we open **home_activities.py** to import our connection pool, remove our mock data, and add our query to establish our connection. 
+Edit **home_activities.py** and import the connection pool, remove our mock data, and add our query to establish our connection. 
 
 ```py
-from lib.db import pool, query_wrap_array
+from lib.db import pool, query_wrap_array #at line 4
 
 ...........................
 
@@ -546,28 +554,84 @@ This will fetch the data and return the results. Since we're writing raw SQL, th
 After working through some SQL errors, we pointed our attention back towards RDS. We spin up our RDS database, then test connecting to it using the terminal.
 
 ```
-psql $PROD_CONNECTION_URL
+echo $PROD_CONNECTION_URL # To see whether the connection details are set
+psql $PROD_CONNECTION_URL # Connecting to RDS
+```
+If it isnt set:
+```
+export PROD_CONNECTION_URL="postgresql://cruddurroot:<RDSdatabasepassword>@cruddur-db-instance.<unique-db-identifier>.us-east-1.rds.amazonaws.com:5432/cruddur"
+gp env PROD_CONNECTION_URL="postgresql://cruddurroot:<RDSdatabasepassword>@cruddur-db-instance.<unique-db-identifier>.us-east-1.rds.amazonaws.com:5432/cruddur"
+```
+confirm the env vars:
+```
+env | grep PROD
+```
+You may test out connecting to the DB:
+```
+psql $CONNECTION_URL #works
+```
+Production connection:
+```
+psql $PROD_CONNECTION_URL #will not work because of Security group rules are not set
+```
+From the terminal, we run `curl ifonfig.me` which outputs our Gitpod IP address. Next we passed `GITPOD_IP=$(curl ifconfig.me)` as variable so that we can grab the GITPOD_IP and connect to RDS. <br>
+Confirm this by running:
+```
+echo $GITPOD_IP
 ```
 
-From the terminal, we run `curl ifonfig.me` which outputs our Gitpod IP address. We next passed `GITPOD_IP=$(curl ifconfig.me)` as variable so that we can grab the GITPOD_IP for RDS whenever needed. This allows us to store our current IP address as an environment variable. 
+Test the `psql` connection, this time it should work. <br>
 
-We again test the `psql` command above, this time it works. Since our IP is going to update everytime we launch our workspace, we will need to manually update that IP stored by the inbound rule everytime as well.
+Production connection:
+```
+psql $PROD_CONNECTION_URL #will not work because of Security group rules are not set
+``
+On the console, create the relevant security groups and take note of their ID. Ideally it should be one security group that allows connections to `POSTGRES` from your gitpod IP and or your computer. <br>
 
-There's several env variables we then set after this, passing our security group id and our security group rule id as variables: `DB_SG_ID` and `DB_SG_RULE_ID`
+There is no problem if you modify the default `SG` or create your own, simply take note of its `ID`.
+ 
+In the CLI set the env variables of the `security group id` and `security group rule id` as variables: `DB_SG_ID` and `DB_SG_RULE_ID`
 
 ```sh
-export DB_SG_ID="sg-12345"
-gp env DB_SG_ID="sg-12345"
-export DB_SG_RULE_ID="sgr-12345"
-gp env DB_SG_RULE_ID="sgr-12345"
+export DB_SG_ID="<sg-12345>"
+gp env DB_SG_ID="<sg-12345>"
+export DB_SG_RULE_ID="<sgr-12345>"
+gp env DB_SG_RULE_ID="<sgr-12345>"
 ```
-Since the ip address changes everytime, you need to change the ip on the security group of the rds instance here is the script to add to the file `rds-update-sg-rule` under `bin`:
+The script below can be used on the terminal to test the connection to RDS and whether the security group is being modified appropriately:
+```sh
 ```py
 aws ec2 modify-security-group-rules \
     --group-id $DB_SG_ID \
     --security-group-rules "SecurityGroupRuleId=$DB_SG_RULE_ID,SecurityGroupRule={Description=GITPOD,IpProtocol=tcp,FromPort=5432,ToPort=5432,CidrIpv4=$GITPOD_IP/32}"
 ```
-We also store our env var in `.gitpod.yml` as well as create a new bash script named `rds-update-sg-rule` to run every time our environment launches:
+```
+Because the IP address changes on Gitpod restart, we need to change the ip on the security group of the rds instance, below is the script to be run to handle this, save it to `backend-flask` > `bin` > `rds-update-sg-rule`:
+```py
+#! /usr/bin/bash
+
+CYAN='\033[1;36m'
+NO_COLOR='\033[0m'
+LABEL="rds-update-sg-rule"
+printf "${CYAN}==== ${LABEL}${NO_COLOR}\n"
+
+aws ec2 modify-security-group-rules \
+    --group-id $DB_SG_ID \
+    --security-group-rules "SecurityGroupRuleId=$DB_SG_RULE_ID,SecurityGroupRule={Description=GITPOD,IpProtocol=tcp,FromPort=5432,ToPort=5432,CidrIpv4=$GITPOD_IP/32}"
+```
+Make the file executable:
+```
+chmod u+x bin/rds-update-sg-rule
+```
+From with `backend-flask` run the file:
+```
+./bin/rds-update-sg-rule
+```
+In case of an error, execute the code below and rerun the script above:
+`export GITPOD_IP=$(curl ifconfig.me)` 
+<br>
+
+We also store our env var in `.gitpod.yml` as well as program `rds-update-sg-rule` to run every time our environment launches:
 
 ```yml
   - name: postgres
@@ -581,27 +645,32 @@ We also store our env var in `.gitpod.yml` as well as create a new bash script n
       export GITPOD_IP=$(curl ifconfig.me)
       source  "$THEIA_WORKSPACE_ROOT/backend-flask/bin/rds-update-sg-rule" 
 ```
+Confirm settings by restarting gitpod and running:
+```
+cd backend-flask
+./bin/db-connect prod
+```
+You should get the message:
+```
+Running in production mode
+psql
+...
+Type the code below to quit the psql connection:
+```
+\q
+```
 
-```
-#! /usr/bin/bash
-
-CYAN='\033[1;36m'
-NO_COLOR='\033[0m'
-LABEL="rds-update-sg-rule"
-printf "${CYAN}== ${LABEL}${NO_COLOR}\n"
-```
-* Command to update the security groups:
-```
-aws ec2 modify-security-group-rules \
-    --group-id $DB_SG_ID \
-    --security-group-rules "SecurityGroupRuleId=$DB_SG_RULE_ID,SecurityGroupRule={Description=GITPOD,IpProtocol=tcp,FromPort=5432,ToPort=5432,CidrIpv4=$GITPOD_IP/32}"
-```
-
-After confirming connection to RDS from Gitpod, modified `docker-compose.yml` to pass a different env var for CONNECTION_URL. 
+After confirming connection to RDS from Gitpod, modify `docker-compose.yml` to use production env vars for PROD_CONNECTION_URL. 
 
 ```yml
 CONNECTION_URL: "${PROD_CONNECTION_URL}"
 ```
+Load your schema to the database:
+```
+./bin/db/schema-load
+```
+After the table is created, if you visit Logs you should get a status `200` code. <br>
+The website will still be empty because there is no data in the database.
 
 # Create Lambda
 Create a lambda in the region where are your services and create the same file under `aws/lambdas` calling the file `cruddur-post-confirmation.py`

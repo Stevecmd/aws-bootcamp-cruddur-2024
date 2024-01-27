@@ -455,8 +455,8 @@ source "$bin_path/db-seed"
  chmod u+x ./db-setup
 ```
 ## Install the Postgres Driver
-With that setup, now we could now install the Postgres driver in our Backend application. <br> 
-We're going to use an AWS Lambda to to insert users into our database. <br> 
+With the foregoing setup, we can now install the Postgres driver in our Backend application. <br> 
+We're going to use a AWS Lambda to to insert users into our database. <br> 
 We need to add PostgreSQL libraries as a dependency to run the Postgres driver and the `Psycopg2 C library for Python`. <br> 
 To implement this, add the following libraries to the requirements.txt file. 
 
@@ -673,7 +673,8 @@ After the table is created, if you visit Logs you should get a status `200` code
 The website will still be empty because there is no data in the database.
 
 # Create Lambda
-Create a lambda in the region where are your services and create the same file under `aws/lambdas` calling the file `cruddur-post-confirmation.py`
+Create a lambda in the region where your services. <br>
+Create the file `cruddur-post-confirmation.py` within the folder `aws/lambdas`
 
 ```
 import json
@@ -683,6 +684,7 @@ def lambda_handler(event, context):
     user = event['request']['userAttributes']
     print('userAttributes')
     print(user)
+
     user_display_name = user['name']
     user_email        = user['email']
     user_handle       = user['preferred_username']
@@ -718,21 +720,68 @@ def lambda_handler(event, context):
     return event
 ```
 
-The env var for the lambda will be **CONNECTION_URL** which has the variable of the **PROD_CONNECTION_URL** set on gitpod/codespace example: `PROD_CONNECTION_URL="postgresql://userofthedb:masterpassword@endpointofthedb:5432/cruddur`
+The env var for the lambda will be **CONNECTION_URL** which has the variable of the **PROD_CONNECTION_URL** set on gitpod/codespace example: `PROD_CONNECTION_URL="postgresql://userofthedb:masterpassword@endpointofthedb:5432/cruddur"`
+**Considerations**
+If this was an actual production website, in anticipation of lots of traffic we would need to use a `lambda proxy` in order to avoid the users flooding the connection but this incurs an additional cost and is complex to implement. To keep the project costs low, I am not using a connection pool. <br> 
+**Tip** The above lambda can be run directly in the lambda console. Configure the env vars and deploy when done. <br>
+Env vars:
+`CONNECTION_URL` `postgresql://userofthedb:masterpassword@endpointofthedb:5432/cruddur` <br>
 
-Once you create the env var, create also the layer>add layers> select specify arn:
+Go to the Lambda layers and add a layer with reference to the arn below:
 ```
-arn:aws:lambda:<region>:<account-number>:layer:psycopg2-py38:1
+arn:aws:lambda:us-east-1:898466741470:layer:psycopg2-py38:1
 ```
 
-## Create Cognito trigger.
-From cognito, select the user pool and go to the user pool properties to find the lambda triggers. Follow the configuration according to the image below:
+## Create Cognito Pool and Lambda trigger.
 
-![lambda triggers](https://github.com/dontworryjohn/aws-bootcamp-cruddur-2023/blob/main/images/lambda%20triggers.png)
+From the Cognito console, select the user pool and go to the `User pool properties` to add a lambda trigger. 
+```
+Trigger type: Sign-up
+Sign-up: Post confirmation trigger
+Lambda function: cruddur-post-confirmation
+Add Lambda trigger
+```
 
-Make sure to attach the following policy **AWSLambdaVPCAccessExecutionRole** to the lambda role by going to configuration>permission> link under the Role name.
+Add a policy to the Lambda by creating a new one.
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+      "Effect": "Allow",
+      "Actions": [
+          "ec2:DescribeNetworkInterface",
+          "ec2:CreateNetworkInterface",
+          "ec2:DeleteNetworkInterface",
+          "ec2:DescribeInstances",
+          "ec2:AttachNetworkInterface",
+      ],
+      "Resource": "*"
+  }]
+}
+```
 
-Once you attach the policy, go to VPC and: 
+Name: **AWSLambdaVPCAccessExecutionRole** <br>
+Description: Enable AWS Lambda to create a Network connection. <br>
+
+Make sure to go to the lambda created and attach the following policy created >> `configuration` > `permission` > `Role name` > `Attach policy`. <br>
+
+Once you attach the policy, on the left hand side of the page select `VPC` and: 
 - select the VPC where RDS resides,
-- the subnet mask (select only one to enable fast lambda processing) and
-- select the same security group of the rds. 
+- the subnet mask (select atleast two) and
+- select the same security group of the rds(default).
+- Save
+
+In the terminal run:
+```
+./bin/db-schema-load prod
+```
+
+Go back to the website and register a new user then sign in -- investigate user registration on the terminal. <br>
+`./bin/db-connect prod`
+Once connected run:
+```
+\dt #should show the tables
+select * from users; #should show registered users
+```
+**NB** Cloudwatch can now be used to check for logs/errors. 
+To save on RDS spend, stop it temporarily.

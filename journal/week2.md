@@ -136,12 +136,12 @@ An idea for an additional span would be:
 span.set_attribute("app.now", now.isoformat())
 ```
 
-add this to home_activities.py
+add the code below to home_activities.py for testing:
 ```py
 LOGGER.info("HomeActivities")
 ```
 
-And comment out the following code:
+Once you receive info on Honeycomb, comment out the following code:
 ```py
 #def run(Logger):
    #Logger.info("HomeActivities")
@@ -220,7 +220,7 @@ In the backend-flask requirements.text, insert the following:
 ```py
 aws-xray-sdk
 ```
-Additionally, to install all the dependencies via docker compose run:
+Additionally, to install all the dependencies via Python package manager run:
 ```sh
 pip install -r requirements.txt
 ```
@@ -240,7 +240,7 @@ xray_recorder.configure(service='backend-flask', dynamic_naming=xray_url)
 XRayMiddleware(app, xray_recorder)
 ```
 Modify the code in app.py as follows:
-around line 154:
+around line 116:
 ```py
 @app.route("/api/activities/home", methods=['GET'])
 @xray_recorder.capture('activities_home')
@@ -249,7 +249,7 @@ def data_home():
   return data, 200
 ```
 
-around line 160:
+around line 127:
 ```py
 @app.route("/api/activities/@<string:handle>", methods=['GET'])
 @xray_recorder.capture('activities_users')
@@ -258,13 +258,13 @@ def data_handle(handle):
   if model['errors'] is not None:
 ```
 
-around line 192:
+around line 160:
 ```py
 @app.route("/api/activities/<string:activity_uuid>", methods=['GET'])
 @xray_recorder.capture('activities_show')
 ```
 
-- Created our own Sampling Rule name 'Cruddur'. This code was written in `aws/json/xray.json` file
+- Created our own Sampling Rule name 'Cruddur'. This code was written in `aws/json/xray.json` file:
 ```json
 {
   "SamplingRule": {
@@ -283,7 +283,7 @@ around line 192:
 }
 ```
 - **To create a new group for tracing and analyzing errors and faults in a Flask application.**
-<bold> Add a sampling group to monitor log events </bold>:
+<br> Add a sampling group to monitor log events:
 ```py
 aws xray create-group \
    --group-name "Cruddur" \
@@ -297,7 +297,7 @@ aws xray create-sampling-rule --cli-input-json file://aws/json/xray.json
 ```
 
 - **Install Daemon Service**
-To install the  X-RAY Daemon Service for that we add the code below to `docker-compose.yml` file.
+Add the code below to `docker-compose.yml` file.
 ```yaml
  xray-daemon:
     image: "amazon/aws-xray-daemon"
@@ -321,11 +321,31 @@ Add the entry below to app.py after the entry 'app = Flask(__name__)'
 XRayMiddleware(app, xray_recorder)
 ```
 
-XXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 The full code for 'user_activities.py' service having implemented x-ray should be similar to:
 ```py
-Insert data here
+from datetime import datetime, timedelta, timezone
+class UserActivities:
+  def run(user_handle):
+    model = {
+      'errors': None,
+      'data': None
+    }
 
+    now = datetime.now(timezone.utc).astimezone()
+
+    if user_handle == None or len(user_handle) < 1:
+      model['errors'] = ['blank_user_handle']
+    else:
+      now = datetime.now()
+      results = [{
+        'uuid': '248959df-3079-4947-b847-9e0892d1bab4',
+        'handle':  'Andrew Brown',
+        'message': 'Cloud is fun!',
+        'created_at': (now - timedelta(days=1)).isoformat(),
+        'expires_at': (now + timedelta(days=31)).isoformat()
+      }]
+      model['data'] = results
+    return model
 ```
 
 ## #3 CloudWatch
@@ -540,23 +560,23 @@ cors = CORS(
 #    LOGGER.error('%s %s %s %s %s %s', timestamp, request.remote_addr, request.method, request.scheme, request.full_path, response.status)
 #    return response
 
-# Rollbar ----------
+# Rollbar
 rollbar_access_token = os.getenv('ROLLBAR_ACCESS_TOKEN')
-@app.before_first_request
-def init_rollbar():
-    """init rollbar module"""
-    rollbar.init(
-        # access token
-        rollbar_access_token,
-        # environment name
-        'production',
-        # server root directory, makes tracebacks prettier
-        root=os.path.dirname(os.path.realpath(__file__)),
-        # flask already sets up logging
-        allow_logging_basic_config=False)
+with app.app_context():
+  def init_rollbar():
+      """init rollbar module"""
+      rollbar.init(
+          # access token
+          rollbar_access_token,
+          # environment name
+          'production',
+          # server root directory, makes tracebacks prettier
+          root=os.path.dirname(os.path.realpath(__file__)),
+          # flask already sets up logging
+          allow_logging_basic_config=False)
 
-    # send exceptions from `app` to rollbar, using flask's signal system.
-    got_request_exception.connect(rollbar.contrib.flask.report_exception, app)
+      # send exceptions from `app` to rollbar, using flask's signal system.
+      got_request_exception.connect(rollbar.contrib.flask.report_exception, app)
 
 @app.route('/rollbar/test')
 def rollbar_test():
@@ -770,7 +790,7 @@ ROLLBAR_ACCESS_TOKEN: "${ROLLBAR_ACCESS_TOKEN}"
   insert the following code in -> backend-flask/app.py after the cloudwatch logs imports (line 33)
 ```py
 ---- Rollbar -----
-import os
+from time import strftime
 import rollbar
 import rollbar.contrib.flask
 from flask import got_request_exception
@@ -800,6 +820,7 @@ def init_rollbar():
     got_request_exception.connect(rollbar.contrib.flask.report_exception, app)
 ```
 - **Add an endpoint to `app.py` to allow rollbar testing:**
+  <br>
   Place it just above '@app.route("/api/message_groups'
 ```py
 @app.route('/rollbar/test')
@@ -807,6 +828,21 @@ def rollbar_test():
     rollbar.report_message('Hello World!', 'warning')
     return "Hello World!"
 ```
+
+At this point I wanted to test the notifications endpoint and realized it wasnt working, below are the fixes:
+
+
+- **Add an endpoint to `app.py` to allow notification:**
+  <br>
+  Add an import `from services.notifications_activities import *` <br>
+  Add the route:
+```py
+@app.route("/api/activities/notifications", methods=['GET'])
+def data_notifications():
+  data = NotificationsActivities.run()
+  return data, 200
+```
+
 Run the app (docker-compose up) to confirm that Rollbar is getting a response.
 On the browser, visit the the backend url and append: '.../api/activities/home'
 You should see some 'json'.

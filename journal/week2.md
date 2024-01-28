@@ -845,3 +845,60 @@ The link will be similar to: 'https://4567-stevecmd-awsbootcampcru-c7fjn6b3pzb.w
 - The frontend - port 3000, <br />
 The link will be similar to: 'https://3000-stevecmd-awsbootcampcru-c7fjn6b3pzb.ws-eu107.gitpod.io/'
 
+## Save the work on its own branch named "week-2"
+```sh
+cd aws-bootcamp-cruddur-2024
+git checkout -b week-2
+```
+<hr/>
+
+## Commit
+Add the changes and create a commit named: "Distributed Tracing"
+```sh
+git add .
+git commit -m "Distributed Tracing"
+```
+Push your changes to the branch
+```sh
+git push origin week-2
+```
+<hr/>
+
+### Tag the commit
+```sh
+git tag -a week-2 -m "Setting up Distributed Tracing"
+```
+<hr/>
+
+### Push your tags
+```sh
+git push --tags
+```
+<hr/>
+
+### Switching Between Branches back to Main
+```sh
+git checkout main
+```
+<hr/>
+
+### Merge Changes
+```sh
+git merge week-2
+```
+<hr/>
+
+### Push Changes to Main
+```sh
+git push origin main
+```
+<hr/>
+
+#### Branches?
+If you want to keep the "week-1" branch for future reference or additional work, 
+you can keep it as is. If you no longer need the branch, you can delete it after merging.
+```sh
+git branch -d week-0  # Deletes the local branch
+git push origin --delete week-0  # Deletes the remote branch
+```
+

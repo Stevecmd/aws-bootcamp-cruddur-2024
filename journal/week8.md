@@ -2779,3 +2779,62 @@ from the `ProfileHeading.css`, paste the new one
     color: rgb(255, 255, 255);
 }
 ```
+
+
+
+## Save the work on its own branch named "week-8"
+```sh
+cd aws-bootcamp-cruddur-2024
+git checkout -b week-8
+```
+<hr/>
+
+## Commit
+Add the changes and create a commit named: "Serverless Image Processing"
+```sh
+git add .
+git commit -m "Serverless Image Processing"
+```
+Push your changes to the branch
+```sh
+git push origin week-8
+```
+<hr/>
+
+### Tag the commit
+```sh
+git tag -a week-8 -m "Setting up - Serverless Image Processing"
+```
+<hr/>
+
+### Push your tags
+```sh
+git push --tags
+```
+<hr/>
+
+### Switching Between Branches back to Main
+```sh
+git checkout main
+```
+<hr/>
+
+### Merge Changes
+```sh
+git merge week-8
+```
+<hr/>
+
+### Push Changes to Main
+```sh
+git push origin main
+```
+<hr/>
+
+#### Branches?
+If you want to keep the "week-1" branch for future reference or additional work, 
+you can keep it as is. If you no longer need the branch, you can delete it after merging.
+```sh
+git branch -d week-8  # Deletes the local branch
+git push origin --delete week-8  # Deletes the remote branch
+```

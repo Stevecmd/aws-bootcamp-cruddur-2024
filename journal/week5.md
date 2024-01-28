@@ -323,3 +323,63 @@ The code below sets the time to -3 hours but this part is not mandatory, set it 
     my_user_handle=users[key]['handle']
   )
   ```
+
+
+
+
+## Save the work on its own branch named "week-5"
+```sh
+cd aws-bootcamp-cruddur-2024
+git checkout -b week-5
+```
+<hr/>
+
+## Commit
+Add the changes and create a commit named: "Distributed Tracing"
+```sh
+git add .
+git commit -m "DynamoDB and Serverless Caching"
+```
+Push your changes to the branch
+```sh
+git push origin week-5
+```
+<hr/>
+
+### Tag the commit
+```sh
+git tag -a week-5 -m "Setting up DynamoDB and Serverless Caching"
+```
+<hr/>
+
+### Push your tags
+```sh
+git push --tags
+```
+<hr/>
+
+### Switching Between Branches back to Main
+```sh
+git checkout main
+```
+<hr/>
+
+### Merge Changes
+```sh
+git merge week-5
+```
+<hr/>
+
+### Push Changes to Main
+```sh
+git push origin main
+```
+<hr/>
+
+#### Branches?
+If you want to keep the "week-1" branch for future reference or additional work, 
+you can keep it as is. If you no longer need the branch, you can delete it after merging.
+```sh
+git branch -d week-5  # Deletes the local branch
+git push origin --delete week-5  # Deletes the remote branch
+```

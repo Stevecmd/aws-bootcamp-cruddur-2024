@@ -230,3 +230,61 @@ We test our API health check to see if we're up to date. We are. The health chec
 
 
 We check our pipeline again, and the deploy stage has completed. 
+
+
+## Save the work on its own branch named "week-9"
+```sh
+cd aws-bootcamp-cruddur-2024
+git checkout -b week-9
+```
+<hr/>
+
+## Commit
+Add the changes and create a commit named: "CI/CD with CodePipeline, CodeBuild and CodeDeploy"
+```sh
+git add .
+git commit -m "CI/CD with CodePipeline, CodeBuild and CodeDeploy"
+```
+Push your changes to the branch
+```sh
+git push origin week-9
+```
+<hr/>
+
+### Tag the commit
+```sh
+git tag -a week-9 -m "Setting up - CI/CD with CodePipeline, CodeBuild and CodeDeploy"
+```
+<hr/>
+
+### Push your tags
+```sh
+git push --tags
+```
+<hr/>
+
+### Switching Between Branches back to Main
+```sh
+git checkout main
+```
+<hr/>
+
+### Merge Changes
+```sh
+git merge week-9
+```
+<hr/>
+
+### Push Changes to Main
+```sh
+git push origin main
+```
+<hr/>
+
+#### Branches?
+If you want to keep the "week-1" branch for future reference or additional work, 
+you can keep it as is. If you no longer need the branch, you can delete it after merging.
+```sh
+git branch -d week-9  # Deletes the local branch
+git push origin --delete week-9  # Deletes the remote branch
+```

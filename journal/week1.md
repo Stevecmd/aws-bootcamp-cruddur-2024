@@ -520,7 +520,7 @@ Implement a healthcheck in the Docker compose file --> 'docker-compose.yml' :
 
 Hardcoded pass for cruddur users = 1234
 
-## Save the work on its own branch named "week-0"
+## Save the work on its own branch named "week-1"
 ```sh
 cd aws-bootcamp-cruddur-2024
 git checkout -b week-1

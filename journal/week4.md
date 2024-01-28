@@ -791,20 +791,71 @@ To save on RDS spend, stop it temporarily.
 Edit the file 'backend-flask' > 'services' > `create_activity.py`
 after 'class CreateActivity' insert the code below:
 ```
-  def create_activity(user_uuid, message, expires_at):
-    sql = f"""
-    INSERT INTO (
-      user_uuid,
-      message,
-      expires_at
-    )
-    VALUES (
-      "{user_uuid}",
-      "{message}",
-      "{expires_at}"
-    )
-    """
-    #query_commit(sql)
+from datetime import datetime, timedelta, timezone
+from lib.db import db
+
+class CreateActivity:
+  def run(message, user_handle, ttl):
+    model = {
+      'errors': None,
+      'data': None
+    }
+
+    now = datetime.now(timezone.utc).astimezone()
+
+    if (ttl == '30-days'):
+      ttl_offset = timedelta(days=30) 
+    elif (ttl == '7-days'):
+      ttl_offset = timedelta(days=7) 
+    elif (ttl == '3-days'):
+      ttl_offset = timedelta(days=3) 
+    elif (ttl == '1-day'):
+      ttl_offset = timedelta(days=1) 
+    elif (ttl == '12-hours'):
+      ttl_offset = timedelta(hours=12) 
+    elif (ttl == '3-hours'):
+      ttl_offset = timedelta(hours=3) 
+    elif (ttl == '1-hour'):
+      ttl_offset = timedelta(hours=1) 
+    else:
+      model['errors'] = ['ttl_blank']
+
+    if user_handle == None or len(user_handle) < 1:
+      model['errors'] = ['user_handle_blank']
+
+    if message == None or len(message) < 1:
+      model['errors'] = ['message_blank'] 
+    elif len(message) > 280:
+      model['errors'] = ['message_exceed_max_chars'] 
+
+    if model['errors']:
+      model['data'] = {
+        'handle':  user_handle,
+        'message': message
+      }   
+    else:
+      expires_at = (now + ttl_offset)
+      uuid = CreateActivity.create_activity(user_handle, message, expires_at)
+      
+      object_json = CreateActivity.query_object_activity(uuid)
+      
+      model['data'] = object_json
+    return model
+  
+  def create_activity(handle, message, expires_at):
+    sql = db.template('activities','create')
+    uuid = db.query_commit(sql,{ 
+      'handle': handle, 
+      'message': message, 
+      'expires_at': expires_at
+      })
+    return uuid
+  
+  def query_object_activity(uuid):
+    sql = db.template('activities','object')
+    return db.query_object_json(sql,{ 
+      'uuid': uuid
+      })
 ```
 Edit the file `backend-flask/lib/db.py` and add the function `print_sql_err`:
 ```
@@ -1033,3 +1084,132 @@ Edit 'home_activities.py':
 # from lib.db import pool, query_wrap_array
 from lib.db import db
 ```
+
+Create the following files in: 'backend-flask' > 'db' > 'sql' > 'activities' and place the following code in it:
+'create.sql':
+```python
+INSERT INTO public.activities (
+  user_uuid,
+  message,
+  expires_at
+)
+VALUES (
+  (SELECT uuid 
+    FROM public.users 
+    WHERE users.handle = %(handle)s
+    LIMIT 1
+  ),
+  %(message)s,
+  %(expires_at)s
+) RETURNING uuid;
+```
+`home.sql`:
+```py
+SELECT
+  activities.uuid,
+  users.display_name,
+  users.handle,
+  activities.message,
+  activities.replies_count,
+  activities.reposts_count,
+  activities.likes_count,
+  activities.reply_to_activity_uuid,
+  activities.expires_at,
+  activities.created_at
+FROM public.activities
+LEFT JOIN public.users ON users.uuid = activities.user_uuid
+ORDER BY activities.created_at DESC
+```
+
+`object.sql`:
+```py
+SELECT
+  activities.uuid,
+  users.display_name,
+  users.handle,
+  activities.message,
+  activities.created_at,
+  activities.expires_at
+FROM public.activities
+INNER JOIN public.users ON users.uuid = activities.user_uuid 
+WHERE 
+  activities.uuid = %(uuid)s
+```
+
+Edit **home_activities.py** as follows:
+```py
+from datetime import datetime, timedelta, timezone
+from opentelemetry import trace
+
+# from lib.db import pool, query_wrap_array
+from lib.db import db
+
+tracer = trace.get_tracer("home.activities")
+
+class HomeActivities:
+  #def run(Logger):
+    #logger.info("HomeActivities")
+  def run(cognito_user_id=None):
+    with tracer.start_as_current_span("home-activities-mock-data"):
+      span = trace.get_current_span()
+      now = datetime.now(timezone.utc).astimezone()
+      span.set_attribute("app.now", now.isoformat)
+
+      # sql = query_wrap_array("""
+      results = [{
+        'uuid': '68f126b0-1ceb-4a33-88be-d90fa7109eee',
+        'handle':  'Andrew Brown',
+                'replies': []
+      }
+      ]
+      if cognito_user_id != None:
+        extra_crud = {
+          'uuid': '248959df-3079-4947-b847-9e0892d1bab4',
+          'handle':  'Lore',
+          'message': 'My dear brother, it the humans that are the problem',
+          'created_at': (now - timedelta(hours=1)).isoformat(),
+          'expires_at': (now + timedelta(hours=12)).isoformat(),
+          'likes': 1042,
+          'replies': []
+        }
+        results.insert(0,extra_crud)
+
+      span.set_attribute("app.result_length", len(results))
+      return results
+
+      
+      
+      
+      
+      
+      
+      
+      
+#       if param != None:
+#         else:
+
+#       results.insert(0,)
+#       span.set_attribute("app.result_length", len(results))
+#       return results
+    
+
+from datetime import datetime, timedelta, timezone
+from opentelemetry import trace
+
+from lib.db import db
+
+#tracer = trace.get_tracer("home.activities")
+
+class HomeActivities:
+  def run(cognito_user_id=None):
+    #logger.info("HomeActivities")
+    #with tracer.start_as_current_span("home-activites-mock-data"):
+    #  span = trace.get_current_span()
+    #  now = datetime.now(timezone.utc).astimezone()
+    #  span.set_attribute("app.now", now.isoformat())
+    sql = db.template('activities','home')
+    results = db.query_array_json(sql)
+    return results
+```
+
+**Test** the app by posting a **CRUD**

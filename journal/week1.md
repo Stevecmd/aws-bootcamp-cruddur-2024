@@ -519,3 +519,61 @@ Implement a healthcheck in the Docker compose file --> 'docker-compose.yml' :
 - [PostGres useful tips - CLI](https://www.prisma.io/dataguide/postgresql/setting-up-a-local-postgresql-database#setting-up-postgresql-on-linux)
 
 Hardcoded pass for cruddur users = 1234
+
+## Save the work on its own branch named "week-0"
+```sh
+cd aws-bootcamp-cruddur-2024
+git checkout -b week-1
+```
+<hr/>
+
+## Commit
+Add the changes and create a commit named: "App Containerization"
+```sh
+git add .
+git commit -m "App Containerization"
+```
+Push your changes to the branch
+```sh
+git push origin week-1
+```
+<hr/>
+
+### Tag the commit
+```sh
+git tag -a week-1 -m "Setting up App Containerization"
+```
+<hr/>
+
+### Push your tags
+```sh
+git push --tags
+```
+<hr/>
+
+### Switching Between Branches back to Main
+```sh
+git checkout main
+```
+<hr/>
+
+### Merge Changes
+```sh
+git merge week-1
+```
+<hr/>
+
+### Push Changes to Main
+```sh
+git push origin main
+```
+<hr/>
+
+#### Branches?
+If you want to keep the "week-1" branch for future reference or additional work, 
+you can keep it as is. If you no longer need the branch, you can delete it after merging.
+```sh
+git branch -d week-0  # Deletes the local branch
+git push origin --delete week-0  # Deletes the remote branch
+```
+

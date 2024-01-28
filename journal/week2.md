@@ -128,7 +128,7 @@ To create span and attribute, add the following code in 'home_activities.py':
 
 at the end of the code, add the following:
 ```python
-      span.set_attribute("app.result_lenght", len(results))
+      span.set_attribute("app.result_length", len(results))
 ```
 
 An idea for an additional span would be:

@@ -24,7 +24,7 @@ pip install -r requirements.txt
 ```
 
 # Restructure Script Folders
-
+## RDS DB
 As we are going to create more scripts, we implement the following folders structure following:
 <br/>
 For each postgres script, the folder will be as follows:
@@ -43,8 +43,8 @@ backend-flask/bin/rds-update-sg-rule → backend-flask/bin/rds/update-sg-rule
 The structure of `setup` will change as well to accomodate the new names above:
 ```py
 #! /usr/bin/bash
-
 set -e # stop if it fails at any point
+
 CYAN='\033[1;36m'
 NO_COLOR='\033[0m'
 LABEL="db-setup"
@@ -53,7 +53,153 @@ printf "${CYAN}==== ${LABEL}${NO_COLOR}\n"
 ABS_PATH=$(readlink -f "$0")
 bin_path=$(dirname $ABS_PATH)
 
-bin_path="$(realpath .)/bin"
+source "$bin_path/db/drop"
+source "$bin_path/db/create"
+source "$bin_path/db/schema-load"
+source "$bin_path/db/seed"
+python "$bin_path/db/update_cognito_user_ids"
+```
+
+**bin/db/connect**:
+```
+#! /usr/bin/bash
+
+if [ "$1" = "prod" ]; then
+  echo "Running in production mode"
+  URL=$PROD_CONNECTION_URL
+else
+  echo "Running in development mode"
+  URL=$CONNECTION_URL
+fi
+
+psql $URL
+```
+
+**bin/db/create**:
+```
+#! /usr/bin/bash
+
+CYAN='\033[1;36m'
+NO_COLOR='\033[0m'
+LABEL="db-create"
+printf "${CYAN}== ${LABEL}${NO_COLOR}\n"
+
+NO_DB_CONNECTION_URL=$(sed 's/\/cruddur//g' <<<"$CONNECTION_URL")
+psql $NO_DB_CONNECTION_URL -c "Create database cruddur;"
+```
+
+**bin/db/drop**:
+```
+#! /usr/bin/bash
+
+CYAN='\033[1;36m'
+NO_COLOR='\033[0m'
+LABEL="db-drop"
+printf "${CYAN}== ${LABEL}${NO_COLOR}\n"
+
+NO_DB_CONNECTION_URL=$(sed 's/\/cruddur//g' <<<"$CONNECTION_URL")
+psql $NO_DB_CONNECTION_URL -c "drop database IF EXISTS cruddur;"
+```
+
+**bin/db/schema-load**:
+```
+#! /usr/bin/bash
+
+CYAN='\033[1;36m'
+NO_COLOR='\033[0m'
+LABEL="db-schema-load"
+printf "${CYAN}== ${LABEL}${NO_COLOR}\n"
+
+ABS_PATH=$(readlink -f "$0")
+BIN_PATH=$(dirname $ABS_PATH)
+PROJECT_PATH=$(dirname $BIN_PATH)
+# echo $PROJECT_PATH
+BACKEND_FLASK_PATH="$PROJECT_PATH/backend-flask"
+# echo "== db-schema-load"
+schema_path="$BACKEND_FLASK_PATH/db/schema.sql"
+echo $schema_path 
+
+if [ "$1" = "prod" ]; then
+  echo "Running in production mode"
+  URL=$PROD_CONNECTION_URL
+else
+  echo "Running in development mode"
+  URL=$CONNECTION_URL
+fi
+
+psql $URL cruddur < $schema_path
+```
+
+**bin/db/seed**:
+```
+#! /usr/bin/bash
+
+CYAN='\033[1;36m'
+NO_COLOR='\033[0m'
+LABEL="db-seed"
+printf "${CYAN}== ${LABEL}${NO_COLOR}\n"
+
+# echo "== db-schema-load"
+# seed_path="$(realpath .)/db/seed.sql"
+# echo $seed_path 
+
+ABS_PATH=$(readlink -f "$0")
+BIN_PATH=$(dirname $ABS_PATH)
+PROJECT_PATH=$(dirname $BIN_PATH)
+# echo $PROJECT_PATH
+BACKEND_FLASK_PATH="$PROJECT_PATH/backend-flask"
+schema_path="$BACKEND_FLASK_PATH/db/schema.sql"
+echo $schema_path
+
+if [ "$1" = "prod" ]; then
+  echo "Running in production mode"
+  CON_URL=$PROD_CONNECTION_URL
+else
+  echo "Running in development mode"
+  CON_URL=$CONNECTION_URL
+fi
+
+psql $CON_URL cruddur < $seed_path
+```
+
+**bin/db/sessions**:
+```
+#! /usr/bin/bash
+CYAN='\033[1;36m'
+NO_COLOR='\033[0m'
+LABEL="db-sessions"
+printf "${CYAN}== ${LABEL}${NO_COLOR}\n"
+
+if [ "$1" = "prod" ]; then
+  echo "Running in production mode"
+  URL=$PROD_CONNECTION_URL
+else
+  echo "Running in development mode"
+  URL=$CONNECTION_URL
+fi
+
+NO_DB_URL=$(sed 's/\/cruddur//g' <<<"$URL")
+psql $NO_DB_URL -c "select pid as process_id, \
+       usename as user,  \
+       datname as db, \
+       client_addr, \
+       application_name as app,\
+       state \
+from pg_stat_activity;"
+```
+
+**bin/db/setup**:
+```
+#! /usr/bin/bash
+set -e # stop if it fails at any point
+
+CYAN='\033[1;36m'
+NO_COLOR='\033[0m'
+LABEL="db-setup"
+printf "${CYAN}==== ${LABEL}${NO_COLOR}\n"
+
+ABS_PATH=$(readlink -f "$0")
+bin_path=$(dirname $ABS_PATH)
 
 source "$bin_path/db/drop"
 source "$bin_path/db/create"
@@ -62,6 +208,126 @@ source "$bin_path/db/seed"
 python "$bin_path/db/update_cognito_user_ids"
 ```
 
+**bin/db/drop**:
+```
+#! /usr/bin/bash
+
+CYAN='\033[1;36m'
+NO_COLOR='\033[0m'
+LABEL="db-drop"
+printf "${CYAN}== ${LABEL}${NO_COLOR}\n"
+
+NO_DB_CONNECTION_URL=$(sed 's/\/cruddur//g' <<<"$CONNECTION_URL")
+psql $NO_DB_CONNECTION_URL -c "drop database IF EXISTS cruddur;"
+```
+
+**bin/db/update_cognito_user_ids**:
+```
+#!/usr/bin/env python3
+
+import boto3
+import os
+import sys
+
+print("== db-update-cognito-user-ids")
+#scripts below are used to import lib.db based on the file structure
+current_path = os.path.dirname(os.path.abspath(__file__))
+parent_path = os.path.abspath(os.path.join(current_path, '..', '..'))
+sys.path.append(parent_path)
+from lib.db import db
+
+def update_users_with_cognito_user_id(handle,sub):
+  sql = """
+    UPDATE public.users
+    SET cognito_user_id = %(sub)s
+    WHERE
+      users.handle = %(handle)s;
+  """
+  db.query_commit(sql,{ #commiting the data received from 'update_users_with_cognito_user_id'
+    'handle' : handle,
+    'sub' : sub
+  })
+
+def get_cognito_user_ids():
+  userpool_id = os.getenv("AWS_COGNITO_USER_POOL_ID")
+  client = boto3.client('cognito-idp')
+  params = {
+    'UserPoolId': userpool_id,
+    'AttributesToGet': [
+        'preferred_username',
+        'sub'
+    ]
+  }
+  response = client.list_users(**params)
+  users = response['Users']
+  dict_users = {}
+  for user in users:
+    attrs = user['Attributes']
+    sub    = next((a for a in attrs if a["Name"] == 'sub'), None)
+    handle = next((a for a in attrs if a["Name"] == 'preferred_username'), None)
+    dict_users[handle['Value']] = sub['Value']
+  return dict_users
+
+users = get_cognito_user_ids()
+
+for handle, sub in users.items(): #iterating through the data received  to update the list of fields
+  print('----',handle,sub)
+  update_users_with_cognito_user_id(
+    handle=handle,
+    sub=sub
+  )
+```
+
+**bin/db/test**:
+```
+#!/usr/bin/env python3
+import psycopg
+import os
+import sys
+
+connection_url = os.getenv("CONNECTION_URL")
+
+conn = None
+try:
+  print('attempting connection')
+  conn = psycopg.connect(connection_url)
+  print("Connection successful!")
+except psycopg.Error as e:
+  print("Unable to connect to the database:", e)
+finally:
+  conn.close()
+```
+
+**bin/db/check-db.sh**:
+```
+# Check if database already exists
+RUN /backend-flask/bin/db/check-db.sh
+
+DB_NAME="cruddur"
+
+# Check if database already exists
+if aws rds describe-db-instances --db-instance-identifier "cruddur-db-instance" --query "DBInstances[].DBInstanceIdentifier" --output text | grep -q "cruddur-db-instance"; then
+  echo "Database instance already exists. Aborting."
+  exit 1
+fi
+```
+
+**bin/db/create-rds-db**:
+```
+# Check if database already exists
+RUN /backend-flask/bin/db/check-db.sh
+
+DB_NAME="cruddur"
+
+# Check if database already exists
+if aws rds describe-db-instances --db-instance-identifier "cruddur-db-instance" --query "DBInstances[].DBInstanceIdentifier" --output text | grep -q "cruddur-db-instance"; then
+  echo "Database instance already exists. Aborting."
+  exit 1
+fi
+```
+
+
+## Dynamo DB
 Create a new folder: `backend-flask/bin/ddb`. <br/>
 Create the following files inside ddb: <br/>
 **drop**
@@ -746,7 +1012,7 @@ The code below sets the time to -3 hours but this part is not mandatory, set it 
   )
   ```
 Create a new folder: `backend-flask/bin/ddb/patterns`. <br/>
-get-conversation
+**get-conversation**
 ```
 #! /usr/bin/env python3
 
@@ -805,7 +1071,7 @@ for item in items: #Printint the items in an easy to read way
   formatted_datetime = dt_object.strftime('%Y-%m-%d %I:%M %p')
   print(f'{sender_handle: <12}{formatted_datetime: <22}{message[:40]}...')
 ```
-list-conversations
+**list-conversations**
 ```
 #! /usr/bin/env python3
 
@@ -865,7 +1131,39 @@ response = dynamodb.query(**query_params)
 # print the items returned by the query
 print(json.dumps(response, sort_keys=True, indent=2))
 ```
+# Cognito
+Create the following file:
+`bin` > `cognito` > `list-users`:
+```
+#!/usr/bin/env python3
 
+import boto3
+import os
+import json
+
+userpool_id = os.getenv("AWS_COGNITO_USER_POOL_ID") #using the env var user pool ID
+client = boto3.client('cognito-idp')
+params = {
+  'UserPoolId': userpool_id,
+  'AttributesToGet': [
+      'preferred_username',
+      'sub'
+  ]
+}
+response = client.list_users(params)
+users = response['Users'] #response from cognito
+
+print(json.dumps(users, sort_keys=True, indent=2, default=str))
+
+dict_users = {} #restructuring the data received into a dictionary  
+for user in users:
+  attrs = user['Attributes']
+  sub    = next((a for a in attrs if a["Name"] == 'sub'), None) #sub is the key
+  handle = next((a for a in attrs if a["Name"] == 'preferred_username'), None) #handle is the value
+  dict_users[handle['Value']] = sub['Value']
+
+print(json.dumps(dict_users, sort_keys=True, indent=2, default=str))
+```
 
 
 

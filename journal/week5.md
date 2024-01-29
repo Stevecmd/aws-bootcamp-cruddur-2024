@@ -328,6 +328,23 @@ fi
 
 
 ## Dynamo DB
+First <b>uncomment</b> the DynamoDB env vars in `docker-compose.yml`:
+```
+  # Dynamo Database configuration ---- Start -----------
+  dynamodb-local:
+    # https://stackoverflow.com/questions/67533058/persist-local-dynamodb-data-in-volumes-lack-permission-unable-to-open-databa
+    # We needed to add user:root to get this working.
+    user: root
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath ./data"
+    image: "amazon/dynamodb-local:latest"
+    container_name: dynamodb-local
+    ports:
+      - "8000:8000"
+    volumes:
+      - "./docker/dynamodb:/home/dynamodblocal/data"
+    working_dir: /home/dynamodblocal
+  # Dynamo Database configuration ---- End -----------
+```
 Create a new folder: `backend-flask/bin/ddb`. <br/>
 Create the following files inside ddb: <br/>
 **drop**
@@ -746,21 +763,56 @@ message = {
     'user_handle': {'S': my_user_handle}
 }
 ```
+Run `docker compose up` and confirm that Dynamo DB is running. <br/>
 
+While in `backend-flask` - Make our files executable:
+```
+chmod u+x bin/ddb/drop
+chmod u+x bin/ddb/list-tables
+chmod u+x bin/ddb/scan
+chmod u+x bin/ddb/schema-load
+chmod u+x bin/ddb/seed
+```
+Test the scripts while in `backend-flask`: <br/>
+If the table exists, the command below will show that the schema has been loaded.
+```
+./bin/ddb/schema-load
+```
+The command below will show the existing tables.
+```
+./bin/ddb/list-tables
+```
+The command below will input data in our table.
+```
+./bin/ddb/seed
+```
+The command below will scan the existing data in the table.
+```
+./bin/ddb/scan
+```
+**NB**
+Only use `drop` if you want to delete a table:<br/>
+`./bin/ddb/drop cruddur-messages prod`
+
+Run:
+`./bin/db/create` - To create a database.
+`./bin/db/schema-load` - To load our schema to the database.
+`./bin/db/seed` - To load our data to the database.
 ## Working of Backend 
 I had to restructure the BASH Scripts with 3 folders having the Utility Commands for PSQL `backend-flask/bin/db`;  DynamoDB `backend-flask/bin/db`; AWS RDS `backend-flask/bin/rds` and AWS Cognito `backend-flask/bin/cognito`. 
 In order to create, configure, and administer AWS services like DynamoDB, add `boto3` to `backend-flask/requirements.txt`.
 As noted in this change, add a command that will enable gitpod to automatically install Python libraries whenever a new workspace is launched.
 
 **In Postgres Local Database**
-Adding 3 users and 1 action to the seed data in `backend-flask/db/seed.sql`
+Adding 3 users and 1 action to the seed data in `backend-flask/db/seed.sql`: <br/>
+**NB** Make sure to edit `('<YourName>', '<yourmailid>', '<youruserhandle>' ,'MOCK')`. <br/>
+For example: `('Londo Mollari','lmollari@centari.com' ,'londo' ,'MOCK')` <br/>
 ```
 -- this file was manually created
 INSERT INTO public.users (display_name, email, handle, cognito_user_id)
 VALUES
   ('<YourName>', '<yourmailid>', '<youruserhandle>' ,'MOCK'),
-  ('Andrew Bayko','bayko@exampro.co' , 'bayko' ,'MOCK'),
-  ('Londo Mollari','lmollari@centari.com' ,'londo' ,'MOCK');
+  ('Andrew Bayko','bayko@exampro.co' , 'bayko' ,'MOCK');
 
 INSERT INTO public.activities (user_uuid, message, expires_at)
 VALUES
@@ -865,9 +917,9 @@ for handle, sub in users.items():
     )
 ```
 
-Then we also added a conversation between me and a user handle named 'bayko' in a `seed.sql` file under `bin/ddb` folder adn that had a time metrics on which it was calculated and was working accordingly. 
-```
+Add a conversation between the user and a user handle named 'bayko' in `seed.sql` file under `bin/ddb` folder. Note the time metric it is actually works:
 
+```
 create_message_group(
   client=ddb,
   message_group_uuid=message_group_uuid,

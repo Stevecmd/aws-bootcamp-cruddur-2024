@@ -1183,6 +1183,21 @@ response = dynamodb.query(**query_params)
 # print the items returned by the query
 print(json.dumps(response, sort_keys=True, indent=2))
 ```
+**NB** 
+We are using python version: 3.8, any other version would require one to change the date format here: `timestamp, '%Y-%m-%dT%H:%M:%S.%f%z'`
+<br/>
+
+Make the files executable:
+```
+chmod u+x bin/ddb/patterns/get-conversation
+chmod u+x bin/ddb/patterns/list-conversations
+```
+Run the files executable:
+```
+./bin/ddb/patterns/get-conversation
+./bin/ddb/patterns/list-conversations
+```
+
 # Cognito
 Create the following file:
 `bin` > `cognito` > `list-users`:

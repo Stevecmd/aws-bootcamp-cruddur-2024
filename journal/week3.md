@@ -27,20 +27,21 @@ Refer to the docs at: [AWS Amplify](https://docs.amplify.aws)
 Install AWS Amplify as it is a development platform and provides you a set of pre-built UI components and Libraries. 
 ```
 cd frontend-react-js 
-npm i aws-amplify --save
+npm install aws-amplify@5.0.17
 ```
-After installing this you will find the library `"aws-amplify": "<version>",` in the frontend-react-js directory's `package.json` file.
+After installing this you will find the library `"aws-amplify": "<version>",` in the frontend-react-js directory's `package.json` file. <br />
+We are specifying Version: 5.0.17 because newer versions do not work with this code.
 <br />
 
-**Tip**
-One can also add it as a dependency in 'frontend-react-js' create the file 'requirements.txt' >
-Input the entry as: 'aws-amplify'.
+**Tip** <br />
+One can also add it as a dependency in `frontend-react-js` create the file `requirements.txt` >
+Input the entry as: `aws-amplify`.
 <br />
 
 **Note: make sure you are running these commands in your `frontend-react-js` directory.**
 
 ### Configure Amplify
-Add the code below in 'frontend-react-js/src/app.js`:
+Add the code below in `frontend-react-js/src/app.js`:
 
 ```js
 import { Amplify } from 'aws-amplify';
@@ -61,7 +62,7 @@ Amplify.configure({
 });
 ```
 
-Set the env vars below in docker-compose.yml > 'frontend-react-js' > 'environment':
+Edit and set the env vars below in docker-compose.yml > `frontend-react-js` > `environment`:
 ```py
       REACT_APP_AWS_PROJECT_REGION: "${AWS_DEFAULT_REGION}"
       REACT_APP_AWS_COGNITO_REGION: "${AWS_DEFAULT_REGION}"
@@ -70,7 +71,7 @@ Set the env vars below in docker-compose.yml > 'frontend-react-js' > 'environmen
 ```
 
 ### **Authentication Process** - Conditionally show components based on 'logged in' or 'logged out'.
-In 'frontend-react-js' > 'src' > 'pages' > `HomeFeedPage.js`.
+In `frontend-react-js` > `src` > `pages` > `HomeFeedPage.js`.
 < br/>
 Add the import:
 ```js
@@ -229,7 +230,7 @@ export default function HomeFeedPage() {
   );
 }
 ```
-In the app.py after 'origins = [frontend, backend]' around line 82 we need to update CORS:
+In the app.py after `origins = [frontend, backend]` around line 82 we need to update CORS:
 ```py
 cors = CORS(
   app, 
@@ -240,7 +241,7 @@ cors = CORS(
 )
 ```
 
-At around line 157 lets enable logging so that we can get debugging info, change the 'data_home' function to read:
+At around line 157 lets enable logging so that we can get debugging info, change the `data_home` function to read:
 ```py
 @app.route("/api/activities/home", methods=['GET'])
 @xray_recorder.capture('activities_home')
@@ -255,10 +256,10 @@ def data_home():
   data = HomeActivities.run()
   return data, 200
 ```
-We should pass the headers to the backend. File: 'backend-flask' > 'app.py':
+We should pass the headers to the backend. File: `backend-flask` > `app.py`:
 Add 'import sys'
 
-Create the following: 'backend-flask/lib/cognito_jwt_token.py' and place the code below in the file:
+Create the following: `backend-flask/lib/cognito_jwt_token.py` and place the code below in the file:
 ```py
 import time
 import requests
@@ -375,9 +376,10 @@ class CognitoJwtToken:
         self.claims = claims 
         return claims
 ```
-Add the 'Flask-AWSCognito' dependency to 'backend-flask/requirements.txt'
-Install the dependencies by running the code below from within 'backend-flask':
-`pip install -r requirements.txt`
+Add the `Flask-AWSCognito` dependency to `backend-flask/requirements.txt`
+Install the dependencies by running the code below from within `backend-flask`:
+`pip install -r requirements.txt` <br />
+
 At this point requirements.txt contains:
 ```txt
 flask
@@ -400,8 +402,8 @@ Flask-AWSCognito
 ```
 In our docker-compose.yml file, add the followingas environment variables of backend-flask:
 ```txt
-      AWS_COGNITO_USER_POOL_ID: "<user-pool-ID eg us-east-1_XXX>"
-      AWS_COGNITO_USER_POOL_CLIENT_ID: "<Insert your client ID>" 
+      REACT_APP_AWS_USER_POOLS_ID: "<user-pool-ID eg us-east-1_XXX>"
+      REACT_APP_CLIENT_ID: "<Insert your client ID>" 
 ```
 In 'app.py' add the import 'from lib.cognito_jwt_token import CognitoJwtToken, extract_access_token, TokenVerifyError' 
 
@@ -486,7 +488,7 @@ const signOut = async () => {
 }
 ```
 
-The full `ProfileInfo.js` page > 'frontend-react-js/src/components/ProfileInfo.js' should now contain:
+The full `ProfileInfo.js` page > `frontend-react-js/src/components/ProfileInfo.js` should now contain:
  
 ```py
 import './ProfileInfo.css';
@@ -589,7 +591,7 @@ const onsubmit = async (event) => {
   }
 ```
 
-The full 'SigninPage.js' should now be similar to:
+The full `SigninPage.js` should now be similar to:
 ```py
 import './SigninPage.css';
 import React from "react";
@@ -709,7 +711,7 @@ aws cognito-idp admin-set-user-password \
 
 
 ### Implementation the sign-up page
-Since you have managed to access using the credential created via console, it is time to delete it cos it is no anymore needed.
+Since you have managed to access using the credential created via console, it is time to delete it as it is not needed anymore.
 
 From the **signuppage.js** remove the following code
 ```
@@ -767,26 +769,26 @@ const onsubmit = async (event) => {
 ```
 
 ### Implementation of the confirmation page
-from the confirmationpage.js, remove the following code
+from the confirmationpage.js, remove the following code:
 
  ```
 import Cookies from 'js-cookie'
 
 ```
 
-and replace with the following
+and replace with the following:
 ```
 import { Auth } from 'aws-amplify';
 ```
 
-and remove the following code
+and remove the following code:
 ```
   const resend_code = async (event) => {
     console.log('resend_code')
     // [TODO] Authenication
   }
 ```
-and replace with the following
+and replace with the following:
 ``` 
 const resend_code = async (event) => {
  
@@ -801,16 +803,16 @@ const resend_code = async (event) => {
       // for this to be an okay match?
       console.log(err)
       if (err.message == 'Username cannot be empty'){
-        setCognitoErrors("You need to provide an email in order to send Resend Activiation Code")   
+        setErrors("You need to provide an email in order to send Resend Activiation Code")   
       } else if (err.message == "Username/client id combination not found."){
-        setCognitoErrors("Email is invalid or cannot be found.")   
+        setErrors("Email is invalid or cannot be found.")   
       }
     }
   }
 
 ```
 
-and remove the following code
+and remove the following code:
 ```
  const onsubmit = async (event) => {
     event.preventDefault();
@@ -834,16 +836,16 @@ and remove the following code
   }
 ```
 
-and replace with the cognito code
+and replace with the cognito code:
 ```
 const onsubmit = async (event) => {
   event.preventDefault();
-  setCognitoErrors('')
+  setErrors('')
   try {
     await Auth.confirmSignUp(email, code);
     window.location.href = "/"
   } catch (error) {
-    setCognitoErrors(error.message)
+    setErrors(error.message)
   }
   return false
 }
@@ -877,7 +879,7 @@ const onsubmit_send_code = async (event) => {
   }
 ```
 
-remove the following code
+remove the following code:
 ```
   const onsubmit_confirm_code = async (event) => {
     event.preventDefault();
@@ -886,17 +888,17 @@ remove the following code
   }
 ```
 
-with the following new code
+with the following new code:
 ```
 const onsubmit_confirm_code = async (event) => {
   event.preventDefault();
-  setCognitoErrors('')
+  setErrors('')
   if (password == passwordAgain){
     Auth.forgotPasswordSubmit(username, code, password)
     .then((data) => setFormState('success'))
-    .catch((err) => setCognitoErrors(err.message) );
+    .catch((err) => setErrors(err.message) );
   } else {
-    setCognitoErrors('Passwords do not match')
+    setErrors('Passwords do not match')
   }
   return false
 }
@@ -912,7 +914,7 @@ The solution is to store the value using localstorage (many thanks to Abdassalam
 The changes will be between the signuppage.js, confirmationpage.js and signinpage.js
 
 
-From the signup page, add the following code this will store the email to the local storage
+From the `signup page`, add the following code this will store the email to the local storage
 ```
 // SignupPage.js
 const onsubmit = async (event) => {
@@ -928,7 +930,7 @@ const onsubmit = async (event) => {
 
 ```
 
-from the confirmation page, add the following code. this checks if the local storage contains email
+from the `confirmation page`, add the following code. this checks if the local storage contains email
 
 ```
 // ConfirmationPage.js
@@ -947,7 +949,7 @@ const onsubmit = async (event) => {
 // ...
 ```
 
-for the signup page, add the following code. this gets the email from the local storage to the confirmation page:
+for the `signup page`, add the following code. this gets the email from the local storage to the `confirmation page`:
 ```
 // SigninPage.js
 // Get email from the signup page where we stored the email in localStorage
@@ -961,7 +963,7 @@ React.useEffect(() => {
 }, []);
 ```
 
-To redirect the home page already logged in, insert the following code
+To redirect the `home page` already logged in, insert the following code
 ```
 // ConfirmationPage.js
 const onsubmit = async (event) => {
@@ -1036,7 +1038,7 @@ html,body {
   background: var(--bg);
 }
 ```
-File: 'frontend-react-js' > 'src' > 'components' > 'JoinSection.css'
+File: `frontend-react-js` > `src` > `components` > `JoinSection.css`
 ```
 .join {
   display: flex;
@@ -1046,7 +1048,7 @@ File: 'frontend-react-js' > 'src' > 'components' > 'JoinSection.css'
   margin-top: 24px;
 }
 ```
-File: 'frontend-react-js' > 'src' > 'App.css'
+File: `frontend-react-js` > `src` > `App.css`
 ```
 .content {
   width: 600px;
@@ -1054,7 +1056,7 @@ File: 'frontend-react-js' > 'src' > 'App.css'
   background: var(--fg);
 }
 ```
-File: 'frontend-react-js' > 'src' > 'components' > 'Search.css'
+File: `frontend-react-js` > `src` > `components` > `Search.css`
 ```
 .search_field input[type='text'] {
   border: solid 1px var(--field-border);
@@ -1071,7 +1073,7 @@ File: 'frontend-react-js' > 'src' > 'components' > 'Search.css'
 }
 ```
 
-File: 'frontend-react-js' > 'src' > 'pages' > 'SignupPage.css'
+File: `frontend-react-js` > `src` > `pages` > `SignupPage.css`
 ```
 article.signup-article input[type='password'] {
   font-family: Arial, Helvetica, sans-serif;
@@ -1097,7 +1099,7 @@ article.signup-article input[type='password']:focus {
 }
 ```
 
-File: 'frontend-react-js' > 'src' > 'pages' > 'SigninPage.css'
+File: `frontend-react-js` > `src` > `pages` > `SigninPage.css`
 ```
 article.signin-article input[type='password'] {
   font-family: Arial, Helvetica, sans-serif;

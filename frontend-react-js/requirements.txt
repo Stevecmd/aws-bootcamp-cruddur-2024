@@ -1,1 +1,3 @@
-aws-amplify==5.0.17
+# aws-amplify==5.0 # Base version
+# aws-amplify==5.0.17 # original version
+aws-amplify==5.0.17-unstable-v5.7 # original version renamed to this

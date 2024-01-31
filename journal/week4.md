@@ -4,7 +4,7 @@
 
 * Run the following code in the CLI: <br>
 Make sure to change the name(**identifier**), password and zone.
-
+ **NB** The version below enables enhanced monitoring which may increase spend <br/>
 ```
 aws rds create-db-instance \
   --db-instance-identifier cruddur-db-instance \
@@ -12,7 +12,7 @@ aws rds create-db-instance \
   --engine postgres \
   --engine-version  14.6 \
   --master-username root \
-  --master-user-password goodDatabasePassword1 \ 
+  --master-user-password goodDatabasePassword1 \
   --allocated-storage 20 \
   --availability-zone us-east-1a \
   --backup-retention-period 0 \
@@ -24,6 +24,26 @@ aws rds create-db-instance \
   --storage-encrypted \
   --enable-performance-insights \
   --performance-insights-retention-period 7 \
+  --no-deletion-protection
+```
+Below is a version without enhanced monitoring:
+```
+aws rds create-db-instance \
+  --db-instance-identifier cruddur-db-instance \
+  --db-instance-class db.t3.micro \
+  --engine postgres \
+  --engine-version 14.6 \
+  --master-username root \
+  --master-user-password goodDatabasePassword1 \
+  --allocated-storage 20 \
+  --availability-zone us-east-1a \
+  --backup-retention-period 0 \
+  --port 5432 \
+  --no-multi-az \
+  --db-name cruddur \
+  --storage-type gp2 \
+  --publicly-accessible \
+  --storage-encrypted \
   --no-deletion-protection
 ```
 Once the commands run, confirm creation on the web interface.
@@ -108,10 +128,14 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 exit from the psql command by typing the following command:
 ```
+exit 
+```
+or
+```
 \q
 ```
 
-After this, from the `postgres:bash` terminal, in the root directory ie `aws-bootcamp-cruddur-2024/backend-flask` run 
+After this, from the `postgres:bash` terminal, in the directory `aws-bootcamp-cruddur-2024/backend-flask` run 
 the code below, input pasword as: `password`. 
 <br>
 
@@ -122,7 +146,7 @@ psql cruddur < db/schema.sql -h localhost -U postgres
 <br>
 This created the extension needed. 
 
-To make doing this easier, we created a `connection url string` to provide all thed details that are needed to connect to our database. <br>
+To make doing this easier, we created a `connection url string` to provide all the details that are needed to connect to our database. <br>
 Make sure to replace '<password>' with your actual password for the postgres DB. <br>
 **NB**:  Our local username is `postgres`.
 
@@ -133,11 +157,15 @@ The format for a connection url string for a Postgres database is the following:
 postgresql://[user[:password]@][netlocation][:port][/dbname][?parameter1=value1]
 ```
 
-test the connection by running:
+Input your password and test the connection:
 ```
 psql postgresql://postgres:<password>@localhost:5432/cruddur
 ```
-If it connects then the code is valid, exit out `\q` and run the code below:
+In my case the command was:
+```
+psql postgresql://postgres:password@localhost:5432/cruddur
+```
+If it connects then the code is valid, exit out `\q` and run the code below after entering your password:
 ```
 export CONNECTION_URL="postgresql://postgres:<password>@localhost:5432/cruddur"
 gp env CONNECTION_URL="postgresql://postgres:<password>@localhost:5432/cruddur"
@@ -147,9 +175,9 @@ test the connection by running:
 psql $CONNECTION_URL
 ```
 
-We then created a connection url string for our production RDS database as well, then set the environment variable there too. <br>
+We then create a connection url string for our production RDS database as well, then set the environment variable there too. <br>
 In the code below, retrieve the endpoint and port from the console on `RDS` > `Databases` > `Connectivity and security`.
-Replace `thisisntmyproductionpassword` with your actual `password`.
+Replace `goodDatabasePassword1` with your actual `password` to be used in Production(RDS). Also replace `cruddur-db-instance.c8ersdfsdf.us-east-1.rds.amazonaws.com` with your endpoint connection details.
 ```
 export PROD_CONNECTION_URL="postgresql://root:goodDatabasePassword1@cruddur-db-instance.c8ersdfsdf.us-east-1.rds.amazonaws.com:5432/cruddur"
 gp env PROD_CONNECTION_URL="postgresql://root:goodDatabasePassword1@cruddur-db-instance.c8ersdfsdf.us-east-1.rds.amazonaws.com:5432/cruddur"
@@ -171,7 +199,7 @@ From the `Backend-flask` folder, make our new files executable by running `chmod
 We started off testing if we can drop our database. To do this, add the code below to `db-drop`.
 
 ```
-psql $CONNECTION_URL -c "drop database cruddur;'
+psql $CONNECTION_URL -c "drop database cruddur";
 ```
 
 This command should psql connect to our local Postgres database using our connection string url, then using `-c` it issues a SQL command of `drop database cruddur;`
@@ -215,7 +243,7 @@ To execute a file run:
 
 We need a way to determine when we're running from our production environment (prod) or our local Postgres environment. <br>
 To do this, we added an if statement to the code.
-Below is the code for `schema-load`.
+Below is the modified code for `schema-load`.
 ```
 #! /usr/bin/bash
 
@@ -366,7 +394,7 @@ echo $seed_path
 psql $CONNECTION_URL cruddur < $seed_path
 
 ```
-This db-seed script will run our `seed.sql` file that we created in `backend-flask/db` which contains: 
+This db-seed script will run `seed.sql` file. Create it in `backend-flask/db` and input: 
 
 ```sql
 -- this file was manually created
@@ -391,6 +419,11 @@ VALUES
 aws ec2 modify-security-group-rules \
     --group-id $DB_SG_ID \
     --security-group-rules "SecurityGroupRuleId=$DB_SG_RULE_ID,SecurityGroupRule={IpProtocol=tcp,FromPort=5432,ToPort=5432,CidrIpv4=$GITPOD_IP/32}"
+```
+Remember to make the files executable:
+```
+chmod u+x bin/db-seed
+chmod u+x bin/db-update-sg-rule 
 ```
 
 To connect to the `PROD` environment, you can affix the command with PROD to the scripts eg. `./bin/db-connect prod`
@@ -458,7 +491,7 @@ source "$bin_path/db-seed"
 With the foregoing setup, we can now install the Postgres driver in our Backend application. <br> 
 We're going to use a AWS Lambda to to insert users into our database. <br> 
 We need to add PostgreSQL libraries as a dependency to run the Postgres driver and the `Psycopg2 C library for Python`. <br> 
-To implement this, add the following libraries to the requirements.txt file. 
+To implement this, add the following libraries to the `backend-flask` >`requirements.txt` file. 
 
 ```
 psycopg[binary]
@@ -515,7 +548,9 @@ Edit **home_activities.py** and import the connection pool, remove our mock data
 
 ```py
 from lib.db import pool, query_wrap_array #at line 4
-
+```
+Below is a sample SQL query that we can later run for home activities:
+```
 ...........................
 
     sql = query_wrap_array("""
@@ -574,7 +609,7 @@ Production connection:
 ```
 psql $PROD_CONNECTION_URL #will not work because of Security group rules are not set
 ```
-From the terminal, we run `curl ifonfig.me` which outputs our Gitpod IP address. Next we passed `GITPOD_IP=$(curl ifconfig.me)` as variable so that we can grab the GITPOD_IP and connect to RDS. <br>
+From the terminal, we run `curl ifconfig.me` which outputs our Gitpod IP address. Next we pass `GITPOD_IP=$(curl ifconfig.me)` as variable so that we can grab the GITPOD_IP and connect to RDS. <br>
 Confirm this by running:
 ```
 echo $GITPOD_IP
@@ -585,10 +620,10 @@ Test the `psql` connection, this time it should work. <br>
 Production connection:
 ```
 psql $PROD_CONNECTION_URL #will not work because of Security group rules are not set
-``
-On the console, create the relevant security groups and take note of their ID. Ideally it should be one security group that allows connections to `POSTGRES` from your gitpod IP and or your computer. <br>
+```
+On the console, create the relevant security group/s and take note of their ID's. Ideally it should be one security group that allows connections to `POSTGRES` from your gitpod IP and or your computer. <br>
 
-There is no problem if you modify the default `SG` or create your own, simply take note of its `ID`.
+There is no problem if you modify the default `SG` or create your own, simply take note of its `ID` and `rule-id`. 
  
 In the CLI set the env variables of the `security group id` and `security group rule id` as variables: `DB_SG_ID` and `DB_SG_RULE_ID`
 
@@ -599,13 +634,13 @@ export DB_SG_RULE_ID="<sgr-12345>"
 gp env DB_SG_RULE_ID="<sgr-12345>"
 ```
 The script below can be used on the terminal to test the connection to RDS and whether the security group is being modified appropriately:
+
 ```sh
-```py
 aws ec2 modify-security-group-rules \
     --group-id $DB_SG_ID \
     --security-group-rules "SecurityGroupRuleId=$DB_SG_RULE_ID,SecurityGroupRule={Description=GITPOD,IpProtocol=tcp,FromPort=5432,ToPort=5432,CidrIpv4=$GITPOD_IP/32}"
 ```
-```
+
 Because the IP address changes on Gitpod restart, we need to change the ip on the security group of the rds instance, below is the script to be run to handle this, save it to `backend-flask` > `bin` > `rds-update-sg-rule`:
 ```py
 #! /usr/bin/bash
@@ -654,7 +689,7 @@ You should get the message:
 ```
 Running in production mode
 psql
-...
+```
 Type the code below to quit the psql connection:
 ```
 \q
@@ -667,7 +702,7 @@ CONNECTION_URL: "${PROD_CONNECTION_URL}"
 ```
 Load your schema to the database:
 ```
-./bin/db/schema-load
+./bin/db-schema-load
 ```
 After the table is created, if you visit Logs you should get a status `200` code. <br>
 The website will still be empty because there is no data in the database.
@@ -721,11 +756,12 @@ def lambda_handler(event, context):
 ```
 
 The env var for the lambda will be **CONNECTION_URL** which has the variable of the **PROD_CONNECTION_URL** set on gitpod/codespace example: `PROD_CONNECTION_URL="postgresql://userofthedb:masterpassword@endpointofthedb:5432/cruddur"`
+<br/>
 **Considerations**
-If this was an actual production website, in anticipation of lots of traffic we would need to use a `lambda proxy` in order to avoid the users flooding the connection but this incurs an additional cost and is complex to implement. To keep the project costs low, I am not using a connection pool. <br> 
-**Tip** The above lambda can be run directly in the lambda console. Configure the env vars and deploy when done. <br>
+If this was an actual production website, in anticipation of lots of traffic we would need to use a `lambda proxy` in order to avoid the users flooding the connection but this incurs an additional cost and is complex to implement. To keep the project costs low, I am not using a connection pool. <br/> 
+**Tip** The above lambda can be run directly in the lambda console. Configure the env vars and deploy when done. <br/>
 Env vars:
-`CONNECTION_URL` `postgresql://userofthedb:masterpassword@endpointofthedb:5432/cruddur` <br>
+`CONNECTION_URL` `postgresql://userofthedb:masterpassword@endpointofthedb:5432/cruddur` <br/>
 
 Go to the Lambda layers and add a layer with reference to the arn below:
 ```
@@ -876,7 +912,7 @@ Edit the file `backend-flask/lib/db.py` and add the function `print_sql_err`:
 
 db = Db()
 ```
-Add the function below to 'db.py':
+Add the function below to `db.py`:
 ```
 def sql_execute
 ```
@@ -954,7 +990,7 @@ class CreateActivity:
     #query_commit(sql)
 ```
 
-The full 'db.py' file will contain:
+The full `db.py` file will contain:
 ```
 from psycopg_pool import ConnectionPool
 import os

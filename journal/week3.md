@@ -29,13 +29,19 @@ Install AWS Amplify as it is a development platform and provides you a set of pr
 cd frontend-react-js 
 npm install aws-amplify@5.0.17
 ```
+
 After installing this you will find the library `"aws-amplify": "<version>",` in the frontend-react-js directory's `package.json` file. <br />
 We are specifying Version: 5.0.17 because newer versions do not work with this code.
 <br />
 
 **Tip** <br />
-One can also add it as a dependency in `frontend-react-js` create the file `requirements.txt` >
-Input the entry as: `aws-amplify`.
+If you prefer to specify the version in a file create `frontend-react-js` > `requirements.txt` and in it place all your frontend dependencies including: <br/>
+```sh
+# aws-amplify==5.0 # Base version
+# aws-amplify==5.0.17 # original version
+aws-amplify==5.0.17-unstable-v5.7 # original version renamed to this
+```
+I have included all possible versions that work with our app but note that version: `5.0.17` at the time of writing this is deprecated but can still be accessed as `5.0.17-unstable-v5.7`. <br/>
 <br />
 
 **Note: make sure you are running these commands in your `frontend-react-js` directory.**
@@ -400,7 +406,7 @@ rollbar
 
 Flask-AWSCognito
 ```
-In our docker-compose.yml file, add the followingas environment variables of backend-flask:
+In our docker-compose.yml file, add the following as environment variables of backend-flask:
 ```txt
       REACT_APP_AWS_USER_POOLS_ID: "<user-pool-ID eg us-east-1_XXX>"
       REACT_APP_CLIENT_ID: "<Insert your client ID>" 

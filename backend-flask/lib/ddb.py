@@ -157,7 +157,7 @@ class Ddb:
 
     try:
       print('== create_message_group.try')
-      # Begin the transaction
+      # Begin the batch/transaction
       response = client.batch_write_item(RequestItems=items)
       return {
         'message_group_uuid': message_group_uuid

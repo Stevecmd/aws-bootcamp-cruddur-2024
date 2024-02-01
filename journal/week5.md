@@ -27,7 +27,7 @@ pip install -r requirements.txt
 ## RDS DB
 As we are going to create more scripts, we implement the following folders structure following:
 <br/>
-For each postgres script, the folder will be as follows:
+For each **postgres script**, the folder will be as follows:
 ```
 backend-flask/bin/db-connect → backend-flask/bin/db/connect
 backend-flask/bin/db-create → backend-flask/bin/db/create
@@ -59,6 +59,7 @@ source "$bin_path/db/schema-load"
 source "$bin_path/db/seed"
 python "$bin_path/db/update_cognito_user_ids"
 ```
+Refactor the files in `bin` by placing them in `db` directory, they contain:
 
 **bin/db/connect**:
 ```
@@ -206,19 +207,6 @@ source "$bin_path/db/create"
 source "$bin_path/db/schema-load"
 source "$bin_path/db/seed"
 python "$bin_path/db/update_cognito_user_ids"
-```
-
-**bin/db/drop**:
-```
-#! /usr/bin/bash
-
-CYAN='\033[1;36m'
-NO_COLOR='\033[0m'
-LABEL="db-drop"
-printf "${CYAN}== ${LABEL}${NO_COLOR}\n"
-
-NO_DB_CONNECTION_URL=$(sed 's/\/cruddur//g' <<<"$CONNECTION_URL")
-psql $NO_DB_CONNECTION_URL -c "drop database IF EXISTS cruddur;"
 ```
 
 **bin/db/update_cognito_user_ids**:
@@ -795,12 +783,12 @@ Only use `drop` if you want to delete a table:<br/>
 `./bin/ddb/drop cruddur-messages prod`
 
 Run:
-`./bin/db/create` - To create a database.
-`./bin/db/schema-load` - To load our schema to the database.
-`./bin/db/seed` - To load our data to the database.
+`./bin/db/create` - To create a database. <br/>
+`./bin/db/schema-load` - To load our schema to the database.<br/>
+`./bin/db/seed` - To load our data to the database.<br/>
 ## Working of Backend 
-I had to restructure the BASH Scripts with 3 folders having the Utility Commands for PSQL `backend-flask/bin/db`;  DynamoDB `backend-flask/bin/db`; AWS RDS `backend-flask/bin/rds` and AWS Cognito `backend-flask/bin/cognito`. 
-In order to create, configure, and administer AWS services like DynamoDB, add `boto3` to `backend-flask/requirements.txt`.
+I had to restructure the BASH Scripts with 3 folders having the Utility Commands for PSQL `backend-flask/bin/db`;  DynamoDB `backend-flask/bin/db`; AWS RDS `backend-flask/bin/rds` and AWS Cognito `backend-flask/bin/cognito`. <br/>
+In order to create, configure, and administer AWS services like DynamoDB, add `boto3` to `backend-flask/requirements.txt`.<br/>
 As noted in this change, add a command that will enable gitpod to automatically install Python libraries whenever a new workspace is launched.
 
 **In Postgres Local Database**

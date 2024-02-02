@@ -2,7 +2,7 @@
 ## Implementation
 
 this is week we start to implementation on AWS ecs with fargate
-
+Week6 fargate
 
 First we need to create a script to check if we can estabilish a connection with the RDS
 
@@ -71,6 +71,12 @@ The next step is to create the cloudwatch log group. use the following command u
 aws logs create-log-group --log-group-name cruddur
 aws logs put-retention-policy --log-group-name cruddur --retention-in-days 1
 ```
+or
+```
+aws logs create-log-group --log-group-name "/cruddur/fargate-cluster"
+
+aws logs put-retention-policy --log-group-name "/cruddur/fargate-cluster" --retention-in-days 1
+```
 
 The next step is to create the container registry the images
 
@@ -85,18 +91,17 @@ aws ecs create-cluster \
 the next steps is to prepare our docker.
 first we need to create 3 repo in ECR. 1st for Python, 2nd for backend-flask and 3rd for frontend-react-js
 
-First we need to login to ECR using the following command (Note this has to be done everytime you need to connect to ECR)
-```
-aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com"
-
-```
-
-
-using the cli we will create the python repo
+using the cli we will create the python repo:
 ```
 aws ecr create-repository \
   --repository-name cruddur-python \
   --image-tag-mutability MUTABLE
+```
+
+We need to login to ECR using the following command (Note this has to be done everytime you need to connect to ECR)
+```
+aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com"
+
 ```
 
 and use the following command using the cli to set the url of the repo created before

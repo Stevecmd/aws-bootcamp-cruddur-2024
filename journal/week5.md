@@ -2177,6 +2177,155 @@ export default function ActivityForm(props) {
 
 
 
+
+Week 5 Dynamodb stream
+./bin/ddb/drop cruddur-messages prod
+
+./bin/ddb/schema-load prod
+
+Got to the AWS console > VPC > endpoint
+Name > ddb-cruddur1
+Service > dynamodb
+VPC > default VPC
+Select Routetable
+Policy > Full access
+Create endpoint
+
+
+Lambda
+Create Function: cruddur-messaging-stream-2
+Runtime: Python
+Create a new role with basic Lambda permissions
+Advanced settings > Enable VPC > Select Default VPC > Choose 2 subnets > Choose Default SG > Create Function
+The lambda:
+```py
+import json
+import boto3
+from boto3.dynamodb.conditions import Key, Attr
+
+dynamodb = boto3.resource(
+ 'dynamodb',
+ region_name='ca-central-1',
+ endpoint_url="http://dynamodb.ca-central-1.amazonaws.com"
+)
+
+def lambda_handler(event, context):
+  pk = event['Records'][0]['dynamodb']['Keys']['pk']['S']
+  sk = event['Records'][0]['dynamodb']['Keys']['sk']['S']
+  if pk.startswith('MSG#'):
+    group_uuid = pk.replace("MSG#","")
+    message = event['Records'][0]['dynamodb']['NewImage']['message']['S']
+    print("GRUP ===>",group_uuid,message)
+    
+    table_name = 'cruddur-messages'
+    index_name = 'message-group-sk-index'
+    table = dynamodb.Table(table_name)
+    data = table.query(
+      IndexName=index_name,
+      KeyConditionExpression=Key('message_group_uuid').eq(group_uuid)
+    )
+    print("RESP ===>",data['Items'])
+    
+    # recreate the message group rows with new SK value
+    for i in data['Items']:
+      delete_item = table.delete_item(Key={'pk': i['pk'], 'sk': i['sk']})
+      print("DELETE ===>",delete_item)
+      
+      response = table.put_item(
+        Item={
+          'pk': i['pk'],
+          'sk': sk,
+          'message_group_uuid':i['message_group_uuid'],
+          'message':message,
+          'user_display_name': i['user_display_name'],
+          'user_handle': i['user_handle'],
+          'user_uuid': i['user_uuid']
+        }
+      )
+      print("CREATE ===>",response)
+
+```
+Grant the role DynamoDb access: Add permissions > Attach policy > AWSLambdaInvocation-DynamoDB -- It provides read access to DynamoDB streams > add an inline policy
+Delete the DynamoDb table, redeploy now that we have GSI, on console Turn on DynamoDB streams > New Image
+On DynamoDb console create Trigger: `cruddur-messaging-stream-2`
+Batch size 1
+Turn on trigger
+
+Deploy the lambda
+
+Create the file `aws` > `lambdas` > `cruddur-messaging-stream`:
+```py
+import json
+import boto3
+from boto3.dynamodb.conditions import Key, Attr
+
+dynamodb = boto3.resource(
+ 'dynamodb',
+ region_name='us-east-1',
+ endpoint_url="http://dynamodb.us-east-1.amazonaws.com"
+)
+
+def lambda_handler(event, context):
+  pk = event['Records'][0]['dynamodb']['Keys']['pk']['S']
+  sk = event['Records'][0]['dynamodb']['Keys']['sk']['S']
+  if pk.startswith('MSG#'):
+    group_uuid = pk.replace("MSG#","")
+    message = event['Records'][0]['dynamodb']['NewImage']['message']['S']
+    print("GRUP ===>",group_uuid,message)
+    
+    table_name = 'cruddur-messages'
+    index_name = 'message-group-sk-index'
+    table = dynamodb.Table(table_name)
+    data = table.query(
+      IndexName=index_name,
+      KeyConditionExpression=Key('message_group_uuid').eq(group_uuid)
+    )
+    print("RESP ===>",data['Items'])
+    
+    # recreate the message group rows with new SK value
+    for i in data['Items']:
+      delete_item = table.delete_item(Key={'pk': i['pk'], 'sk': i['sk']})
+      print("DELETE ===>",delete_item)
+      
+      response = table.put_item(
+        Item={
+          'pk': i['pk'],
+          'sk': sk,
+          'message_group_uuid':i['message_group_uuid'],
+          'message':message,
+          'user_display_name': i['user_display_name'],
+          'user_handle': i['user_handle'],
+          'user_uuid': i['user_uuid']
+        }
+      )
+      print("CREATE ===>",response)
+```
+Save the policy as `cruddur-messaging-stream-dynamodb`.
+
+Policy > stream > view cloudwatch logs > Check cloudwatch for any events once you try log in to the website and create a new message, for instance using Londo:`https://3000-stevecmd-awsbootcampcru-c7fjn6b3pzb.ws-eu107.gitpod.io/messages/new/londo`
+
+Create `cruddur-message-stream-policy.json` in `aws > json > policies`:
+```
+{
+	"Version": "2012-10-17",
+	"Statement": [
+		{
+			"Sid": "VisualEditor0",
+			"Effect": "Allow",
+			"Action": [
+				"dynamodb:PutItem",
+				"dynamodb:DeleteItem",
+				"dynamodb:Query"
+			],
+			"Resource": [
+				"arn:aws:dynamodb:us-east-1:652162945585:table/cruddur-messages/index/message-group-sk-index",
+				"arn:aws:dynamodb:us-east-1:652162945585:table/cruddur-messages"
+			]
+		}
+	]
+}
+```
+
 ## Save the work on its own branch named "week-5"
 ```sh
 cd aws-bootcamp-cruddur-2024

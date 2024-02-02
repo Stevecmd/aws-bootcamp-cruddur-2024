@@ -1,7 +1,8 @@
-FROM python:3.10-slim-buster
+# FROM python:3.10-slim-buster
 
-ENV FLASK_ENV=development
-# FROM 652162945585.dkr.ecr.us-east-1.amazonaws.com/cruddur-python:3.10-slim-buster
+# ENV FLASK_ENV=development
+FROM 652162945585.dkr.ecr.us-east-1.amazonaws.com/cruddur-python:3.10-slim-buster
+
 # Inside container
 # Make a new folder inside the container
 WORKDIR /backend-flask
@@ -21,7 +22,8 @@ COPY . .
 
 # Setting env vars inside container
 # and will remain set while container is running
-ENV FLASK_ENV=development
+# ENV FLASK_ENV=development
+ENV FLASK_DEBUG=1
 
 EXPOSE ${PORT}
 # The command itself is invoking the Python interpreter (python3) with

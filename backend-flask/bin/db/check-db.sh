@@ -1,5 +1,4 @@
-# Check if database already exists
-RUN /backend-flask/bin/db/check-db.sh
+#!/bin/bash
 
 DB_NAME="cruddur"
 

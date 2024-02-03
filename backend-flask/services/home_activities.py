@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from opentelemetry import trace
 
-from lib.db import db, pool, query_wrap_array
+from lib.db import db
 
 #tracer = trace.get_tracer("home.activities")
 
@@ -37,14 +37,3 @@ class HomeActivities:
         # the first field being the data
         json = cur.fetchone()
     return json[0]
-  print("SQL------")
-  print(sql)
-  print("SQL------")
-  with pool.connection() as conn:
-    with conn.cursor() as cur:
-      cur.execute(sql)
-      # this will return a tuple
-      # the first field being data
-      json = cur.fetchone()
-      return json[0]
-  return results

@@ -164,7 +164,7 @@ In my case the command was:
 ```
 psql postgresql://postgres:password@localhost:5432/cruddur
 ```
-If it connects then the code is valid, exit out `\q` and run the code below after entering your password:
+If it connects then the code is valid, exit out `\q` and edit the code below by entering your password and run it:
 ```
 export CONNECTION_URL="postgresql://postgres:<password>@localhost:5432/cruddur"
 gp env CONNECTION_URL="postgresql://postgres:<password>@localhost:5432/cruddur"
@@ -412,7 +412,7 @@ VALUES
 ```
 
 ### `./bin/db-update-sg-rule` to setup our Security groups to access our RDS database:
-```
+```sh
 #! /usr/bin/bash
 
 aws ec2 modify-security-group-rules \
@@ -420,7 +420,7 @@ aws ec2 modify-security-group-rules \
     --security-group-rules "SecurityGroupRuleId=$DB_SG_RULE_ID,SecurityGroupRule={IpProtocol=tcp,FromPort=5432,ToPort=5432,CidrIpv4=$GITPOD_IP/32}"
 ```
 Remember to make the files executable:
-```
+```sh
 chmod u+x bin/db-seed
 chmod u+x bin/db-update-sg-rule 
 ```
@@ -435,7 +435,7 @@ We may need to see which connections are running on our Postgres database in ord
 For this, we implement `db-sessions` and make it executable. <br>
 Create a file called `db-sessions` under `backend-flask/bin`
 
-```
+```sh
 #! /usr/bin/bash
 CYAN='\033[1;36m'
 NO_COLOR='\033[0m'
@@ -458,7 +458,7 @@ psql $NO_DB_URL -c "select pid as process_id, \
        state \
 from pg_stat_activity;"
 ```
-```
+```sh
  chmod u+x ./db-sessions
 ```
 
@@ -467,7 +467,7 @@ Run this, to see the active connections to the database, and close unnecessary c
 We then create a script to run all of our commands, so that we don't have to run them individually. We create `db-setup` and made it executable.
 
 ### db-setup
-```
+```sh
 #! /usr/bin/bash
 -e # stop if it fails at any point
 
@@ -483,7 +483,7 @@ source "$bin_path/db-create"
 source "$bin_path/db-schema-load"
 source "$bin_path/db-seed"
 ```
-```
+```sh
  chmod u+x ./db-setup
 ```
 ## Install the Postgres Driver
@@ -492,7 +492,7 @@ We're going to use a AWS Lambda to to insert users into our database. <br>
 We need to add PostgreSQL libraries as a dependency to run the Postgres driver and the `Psycopg2 C library for Python`. <br> 
 To implement this, add the following libraries to the `backend-flask` >`requirements.txt` file. 
 
-```
+```py
 psycopg[binary]
 psycopg[pool]
 ```
@@ -549,7 +549,7 @@ Edit **home_activities.py** and import the connection pool, remove our mock data
 from lib.db import pool, query_wrap_array #at line 4
 ```
 Below is a sample SQL query that we can later run for home activities:
-```
+```sh
 ...........................
 
     sql = query_wrap_array("""
@@ -587,7 +587,7 @@ This will fetch the data and return the results. Since we're writing raw SQL, th
 
 After working through some SQL errors, we pointed our attention back towards RDS. We spin up our RDS database, then test connecting to it using the terminal.
 
-```
+```sh
 echo $PROD_CONNECTION_URL # To see whether the connection details are set
 psql $PROD_CONNECTION_URL # Connecting to RDS
 ```
@@ -604,10 +604,8 @@ You may test out connecting to the DB:
 ```
 psql $CONNECTION_URL #works
 ```
-Production connection:
-```
-psql $PROD_CONNECTION_URL #will not work because of Security group rules are not set
-```
+### Production connection:
+
 From the terminal, we run `curl ifconfig.me` which outputs our Gitpod IP address. Next we pass `GITPOD_IP=$(curl ifconfig.me)` as variable so that we can grab the GITPOD_IP and connect to RDS. <br>
 Confirm this by running:
 ```
@@ -655,11 +653,11 @@ aws ec2 modify-security-group-rules \
 ```
 Make the file executable:
 ```
-chmod u+x bin/rds-update-sg-rule
+chmod u+x bin/db/rds/update-sg-rule
 ```
 From with `backend-flask` run the file:
 ```
-./bin/rds-update-sg-rule
+./bin/db/rds/update-sg-rule
 ```
 In case of an error, execute the code below and rerun the script above:
 `export GITPOD_IP=$(curl ifconfig.me)` 
@@ -682,7 +680,7 @@ We also store our env var in `.gitpod.yml` as well as program `rds-update-sg-rul
 Confirm settings by restarting gitpod and running:
 ```
 cd backend-flask
-./bin/db-connect prod
+./bin/db/connect prod
 ```
 You should get the message:
 ```
@@ -701,7 +699,7 @@ CONNECTION_URL: "${PROD_CONNECTION_URL}"
 ```
 Load your schema to the database:
 ```
-./bin/db-schema-load
+./bin/db/schema-load
 ```
 After the table is created, if you visit Logs you should get a status `200` code. <br>
 The website will still be empty because there is no data in the database.
@@ -710,7 +708,7 @@ The website will still be empty because there is no data in the database.
 Create a lambda in the region where your services. <br>
 Create the file `cruddur-post-confirmation.py` within the folder `aws/lambdas`
 
-```
+```py
 import json
 import psycopg2
 
@@ -760,7 +758,7 @@ The env var for the lambda will be **CONNECTION_URL** which has the variable of 
 If this was an actual production website, in anticipation of lots of traffic we would need to use a `lambda proxy` in order to avoid the users flooding the connection but this incurs an additional cost and is complex to implement. To keep the project costs low, I am not using a connection pool. <br/> 
 **Tip** The above lambda can be run directly in the lambda console. Configure the env vars and deploy when done. <br/>
 Env vars:
-`CONNECTION_URL` `postgresql://userofthedb:masterpassword@endpointofthedb:5432/cruddur` <br/>
+`CONNECTION_URL`: `postgresql://userofthedb:masterpassword@endpointofthedb:5432/cruddur` <br/>
 
 Go to the Lambda layers and add a layer with reference to the arn below:
 ```
@@ -808,11 +806,11 @@ Once you attach the policy, on the left hand side of the page select `VPC` and:
 
 In the terminal run:
 ```
-./bin/db-schema-load prod
+./bin/db/schema-load prod
 ```
 
 Go back to the website and register a new user then sign in -- investigate user registration on the terminal. <br>
-`./bin/db-connect prod`
+`./bin/db/connect prod`
 Once connected run:
 ```
 \dt #should show the tables

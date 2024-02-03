@@ -1,0 +1,43 @@
+// {
+//     "Version":"2012-10-17",
+//     "Statement":[{
+//         "Action":["sts:AssumeRole"],
+//         "Effect":"Allow",
+//         "Principal":{
+//           "Service":["ecs-tasks.amazonaws.com"]
+//       }},{
+//         "Effect": "Allow",
+//         "Action": [
+//             "ssm:GetParameters",
+//             "ssm:GetParameter"
+//         ],
+//         "Resource": "arn:aws:ssm:us-east-1:652162945585:parameter/cruddur/backend-flask/*" 
+//       }]
+// }
+{
+  "Version": "2012-10-17",
+  "Statement": [
+      {
+          "Sid": "VisualEditor0",
+          "Effect": "Allow",
+          "Action": [
+              "ecr:GetDownloadUrlForLayer",
+              "ecr:BatchGetImage",
+              "ecr:GetAuthorizationToken",
+              "ecr:BatchCheckLayerAvailability",
+              "logs:CreateLogStream",
+              "logs:PutLogEvents"
+          ],
+          "Resource": "*"
+      },
+      {
+          "Sid": "VisualEditor1",
+          "Effect": "Allow",
+          "Action": [
+              "ssm:GetParameters",
+              "ssm:GetParameter"
+          ],
+          "Resource": "arn:aws:ssm:us-east-1:652162945585:parameter/cruddur/backend-flask/*"
+      }
+  ]
+}

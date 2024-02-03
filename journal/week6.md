@@ -29,10 +29,10 @@ finally:
   conn.close()
 
 ```
-change the file permissions using: chmod u+x backend-flask/bin/db/test
+change the file permissions using: `chmod u+x backend-flask/bin/db/test`
 
-The next step is to create a health check of our backend-flask container
-add the following code inside the app.py and remove the rollbar test
+The next step is to create a health check of our `backend-flask` container
+add the following code inside the app.py and optionally remove the rollbar test.
 
 ```
 @app.route('/api/health-check')
@@ -40,9 +40,7 @@ def health_check():
   return {'success': True}, 200
 ```
 
-
-
-We'll create a new biash script on bin/flask/health-check
+We'll create a new bash script on bin/flask/health-check:
 
 ```
 #!/usr/bin/env python3
@@ -64,9 +62,9 @@ except Exception as e:
   print(e)
   exit(1) # false
 ```
-change the chmod u+x
+chmod u+x ./backend-flask/bin/flask/health-check 
 
-The next step is to create the cloudwatch log group. use the following command using the terminal
+The next step is to create the cloudwatch log group. use the following command using the terminal:
 ```
 aws logs create-log-group --log-group-name cruddur
 aws logs put-retention-policy --log-group-name cruddur --retention-in-days 1
@@ -78,9 +76,9 @@ aws logs create-log-group --log-group-name "/cruddur/fargate-cluster"
 aws logs put-retention-policy --log-group-name "/cruddur/fargate-cluster" --retention-in-days 1
 ```
 
-The next step is to create the container registry the images
+Create the container registry the images:
 
-in this steps we will create the cluster in cli
+in this step we will create the `cruddur` cluster in cli
 
 ```
 aws ecs create-cluster \
@@ -88,71 +86,80 @@ aws ecs create-cluster \
 --service-connect-defaults namespace=cruddur
 ```
 
-the next steps is to prepare our docker.
-first we need to create 3 repo in ECR. 1st for Python, 2nd for backend-flask and 3rd for frontend-react-js
+The next step is to prepare our docker configuration.
+We need to create 3 repo's in ECR. 
+- Python, 
+- backend-flask and 
+- frontend-react-js
 
-using the cli we will create the python repo:
+Create the python repo using the CLI:
 ```
 aws ecr create-repository \
   --repository-name cruddur-python \
   --image-tag-mutability MUTABLE
 ```
 
-We need to login to ECR using the following command (Note this has to be done everytime you need to connect to ECR)
+Login to ECR using the following command (Note this has to be done everytime you need to connect to ECR):
 ```
 aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com"
 
 ```
 
-and use the following command using the cli to set the url of the repo created before
+Use the following command on the cli to set the url of the repo created:
 ```
 export ECR_PYTHON_URL="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/cruddur-python"
 echo $ECR_PYTHON_URL
 ```
 
-the following command will pull the python:3.10-slim-buster, tag the image and push to the repo in ECR
+The following commands will pull the python:3.10-slim-buster, tag the image and push to the repo in ECR:
 ```
 docker pull python:3.10-slim-buster
 docker tag python:3.10-slim-buster $ECR_PYTHON_URL:3.10-slim-buster
 docker push $ECR_PYTHON_URL:3.10-slim-buster
 ```
 
-from the dockerfile of backend-fask change the following line:
+Modify dockerfile in backend-flask as below:</br>
+Before:
 ```
 FROM python:3.10-slim-buster
 
 ENV FLASK_ENV=development
 ````
-with
+After:
 ```
-FROM <repo-code>.dkr.ecr.us-east-1.amazonaws.com/cruddur-python
+FROM <repo-url>.dkr.ecr.us-east-1.amazonaws.com/cruddur-python
 
 ENV FLASK_DEBUG=1
 ```
 Note:
-- to make sure if it works, try to do Compose Up 
-- to remove an image use the following code docker image rm nameoffile:tag
+- to make sure it works, try to do Compose Up 
+- to remove an image use the following code docker image `rm name:tag`
 - to check the images of docker use docker images
 
-the command to compose using the cli is the following
+The command to start `backend-flask` and `db` using the cli is:
 ```
 docker compose up backend-flask db
 ```
+Visit the backend port(4567) and append `/api/health-check` to check for the response, it should return:
+```sh
+success: true
+```
+An alternative to running exposed service such as `CMD [ "python3", "-m" , "flask", "run", "--host=0.0.0.0", "--port=4567"]` in our Dockerfile, you can rely on 3rd party services such as [Gunicorn](https://gunicorn.org/)
 
-next is to create the repo for the backend flask:
+Create the repo for the backend flask:
 ```
 aws ecr create-repository \
   --repository-name backend-flask \
   --image-tag-mutability MUTABLE
 ```
 
-and use the following command using the cli to set the url of the repo created before:
+Use the following command in the cli to set the url of the repo created above:
 ```
 export ECR_BACKEND_FLASK_URL="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/backend-flask"
 echo $ECR_BACKEND_FLASK_URL
 ```
 
-now it is time to build the backend-flask image(make sure you are inside the directory)
+Build the backend-flask image(make sure you are inside the `backend-flask`)
 ```
 docker build -t backend-flask .
 ```
@@ -162,19 +169,28 @@ Tag the image
 docker tag backend-flask:latest $ECR_BACKEND_FLASK_URL:latest
 ```
 
-and finally push to our repo
+Push the image to the repo:
 
 ```
 docker push $ECR_BACKEND_FLASK_URL:latest
 ```
+## Tip
+On ECS the difference between the two items below is: <br/>
+- A Task destroys itself once it has completed its purpose.
+- A Service is a continuously running application and is suitable for a web app.
+To create a service you need to create a task definition before-hand.
 
-IN THIS STEPS WE START TO CREATE THE CONTAINER
-
-create the policies for the container
-
-First we need to pass the parameters to the ssm 
+## CREATING THE CONTAINER
+Pass the parameters to the CLI to initialize AWS Systems Manager (ssm) env vars: 
 ```
 export OTEL_EXPORTER_OTLP_HEADERS="x-honeycomb-team=$HONEYCOMB_API_KEY"
+```
+Confirm:
+```sh
+echo $OTEL_EXPORTER_OTLP_HEADERS
+```
+
+```
 aws ssm put-parameter --type "SecureString" --name "/cruddur/backend-flask/AWS_ACCESS_KEY_ID" --value $AWS_ACCESS_KEY_ID
 aws ssm put-parameter --type "SecureString" --name "/cruddur/backend-flask/AWS_SECRET_ACCESS_KEY" --value $AWS_SECRET_ACCESS_KEY
 aws ssm put-parameter --type "SecureString" --name "/cruddur/backend-flask/CONNECTION_URL" --value $PROD_CONNECTION_URL
@@ -182,59 +198,55 @@ aws ssm put-parameter --type "SecureString" --name "/cruddur/backend-flask/ROLLB
 aws ssm put-parameter --type "SecureString" --name "/cruddur/backend-flask/OTEL_EXPORTER_OTLP_HEADERS" --value "x-honeycomb-team=$HONEYCOMB_API_KEY"
 ```
 
-create the new trust entities json file under this path aws/policies/service-assume-role-execution-policy.json
 
-```
-{
-  "Version":"2012-10-17",
-  "Statement":[{
-      "Action":["sts:AssumeRole"],
-      "Effect":"Allow",
-      "Principal":{
-        "Service":["ecs-tasks.amazonaws.com"]
-    }}]
-}
-
-```
+Create the required policies for the container:
 
 Create another json file under this path aws/policies/service-execution-policy.json
-```
+```sh
 {
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Sid": "VisualEditor0",
-            "Effect": "Allow",
-            "Action": [
-                "ecr:GetAuthorizationToken",
-                "ecr:BatchCheckLayerAvailability",
-                "ecr:GetDownloadUrlForLayer",
-                "ecr:BatchGetImage",
-                "logs:CreateLogStream",
-                "logs:PutLogEvents"
-            ],
-            "Resource": "*"
-        },
-        {
-            "Sid": "VisualEditor1",
-            "Effect": "Allow",
-            "Action": [
-                "ssm:GetParameters",
-                "ssm:GetParameter"
-            ],
-            "Resource": "arn:aws:ssm:us-east-1:<account-number>:parameter/cruddur/backend-flask/*"
-        }
-    ]
+    "Version":"2012-10-17",
+    "Statement":[{
+        "Action":["sts:AssumeRole"],
+        "Effect":"Allow",
+        "Principal":{
+          "Service":["ecs-tasks.amazonaws.com"]
+      }},{
+        "Effect": "Allow",
+        "Action": [
+            "ssm:GetParameters",
+            "ssm:GetParameter"
+        ],
+        "Resource": "arn:aws:ssm:us-east-1:652162945585:parameter/cruddur/backend-flask/*" 
+      }]
 }
 ```
+From `aws-bootcamp-cruddur-2024` Deploy `service-execution-policy.json` by:
+```sh
+ aws iam create-role \   
+ --role-name CruddurServiceExecutionRole \    
+ --assume-role-policy-document file://aws/policies/service-execution-policy.json
+```
 
 
 
-and run using the following commands on CLI
+create the new trust entities json file under this path aws/policies/service-assume-role-execution-policy.json
+
+```py
+{
+    "Version":"2012-10-17",
+    "Statement":[{
+        "Action":["sts:AssumeRole"],
+        "Effect":"Allow",
+        "Principal":{
+          "Service":["ecs-tasks.amazonaws.com"]
+      }}]
+  }
+```
+from `/workspace/aws-bootcamp-cruddur-2024` run the following commands on CLI:
 ```
 aws iam create-role \
     --role-name CruddurServiceExecutionRole \
-    --assume-role-policy-document file://aws/policies/service-assume-role-execution-policy.json
+    --assume-role-policy-document file://aws/policies/service-execution-policy.json
 ```
 
 
@@ -242,14 +254,14 @@ aws iam create-role \
 aws iam put-role-policy \
     --policy-name CruddurServiceExecutionPolicy \
     --role-name CruddurServiceExecutionRole  \
-    --policy-document file://aws/policies/service-execution-policy.json
+    --policy-document file://aws/policies/service-assume-role-execution-policy.json
 ```
 
 via console attach the following policy:
 make sure to attach to the CruddurServiceExecutionRole the CloudWatchFullAccess
 
 
-now we create the taskrole
+Create the task role:
 
 ```
 aws iam create-role \
@@ -266,44 +278,47 @@ aws iam create-role \
 }"
 ```
 
-this attach the policy for SSM
+Attach the policy to allow us to use Session manager:
 ```
 aws iam put-role-policy \
   --policy-name SSMAccessPolicy \
   --role-name CruddurTaskRole \
-  --policy-document "{
-  \"Version\":\"2012-10-17\",
-  \"Statement\":[{
-    \"Action\":[
-      \"ssmmessages:CreateControlChannel\",
-      \"ssmmessages:CreateDataChannel\",
-      \"ssmmessages:OpenControlChannel\",
-      \"ssmmessages:OpenDataChannel\"
-    ],
-    \"Effect\":\"Allow\",
-    \"Resource\":\"*\"
-  }]
-}
+  --policy-document '{
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Action": [
+          "ssmmessages:CreateControlChannel",
+          "ssmmessages:CreateDataChannel",
+          "ssmmessages:OpenControlChannel",
+          "ssmmessages:OpenDataChannel"
+        ],
+        "Effect": "Allow",
+        "Resource": "*"
+      }
+    ]
+  }'
+
 ```
 
-pass this code to give access to cloudwatch to the cruddurtaskrole
+Give access to cloudwatch to the cruddurtaskrole:
 ```
 aws iam attach-role-policy --policy-arn arn:aws:iam::aws:policy/CloudWatchFullAccess --role-name CruddurTaskRole
 ```
-this command attach a policy to write to the xraydaemon
+Attach a policy to write to the xraydaemon:
 ```
 aws iam attach-role-policy --policy-arn arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess --role-name CruddurTaskRole
 ```
 
-now we create the task definition via cli
+## Task definition creation via cli
 
-create a new file /aws/task-definitions/backend-flask.json
+Create a new file /aws/task-definitions/backend-flask.json
 
 ```
 {
   "family": "backend-flask",
   "executionRoleArn": "arn:aws:iam::<account-number>:role/CruddurServiceExecutionRole",
-  "taskRoleArn": "",
+  "taskRoleArn": "arn:aws:iam::<account-number>:role/CruddurTaskRole",
   "networkMode": "awsvpc",
   "cpu": "256",
   "memory": "512",
@@ -362,13 +377,16 @@ create a new file /aws/task-definitions/backend-flask.json
 }
 ```
 
-and launch using the following command
+Launch the services and tasks using the following commands:
 
 ```
 aws ecs register-task-definition --cli-input-json file://aws/task-definitions/backend-flask.json
 ```
+On the console, confirm registration at `Amazon Elastic Container Service` > `Task definitions` > `backend-flask`.
+Once the container is up, we now need to create a security group for it hence the need to get the default VPC env vars then 
+create the SG.
 
-next we need to find the default vpc
+Detect the default vpc from within the `backend-flask` folder:
 ```
 export DEFAULT_VPC_ID=$(aws ec2 describe-vpcs \
 --filters "Name=isDefault, Values=true" \
@@ -377,7 +395,7 @@ export DEFAULT_VPC_ID=$(aws ec2 describe-vpcs \
 echo $DEFAULT_VPC_ID
 ```
 
-and the security group
+Create the security group:
 ```
 export CRUD_SERVICE_SG=$(aws ec2 create-security-group \
   --group-name "crud-srv-sg" \
@@ -387,16 +405,20 @@ export CRUD_SERVICE_SG=$(aws ec2 create-security-group \
 echo $CRUD_SERVICE_SG
 ```
 
+You could also hard code the SG value if the SG already exists:
+```
+  export CRUD_SERVICE_SG="sg-08050161e2ec5f683"
+```
+
 ```
 aws ec2 authorize-security-group-ingress \
   --group-id $CRUD_SERVICE_SG \
   --protocol tcp \
   --port 4567 \
   --cidr 0.0.0.0/0
-  ```
+```
 
-  Create a file called service-backend-flask.json under the path /aws/json/
-  replace the value of security group and subnetmask
+Create a file called `service-backend-flask.json` under the path: `/aws/json/` and replace the value of security group and subnetmask:
 ```
 {
   "cluster": "cruddur",
@@ -433,9 +455,7 @@ aws ec2 authorize-security-group-ingress \
   }
 }
 ```
-
-if you need the to get the default subnet mask follow the following code (relaunch the on the line 414 if needed)
-
+Get the Default Subnet ID's:
 ```
 export DEFAULT_SUBNET_IDS=$(aws ec2 describe-subnets  \
  --filters Name=vpc-id,Values=$DEFAULT_VPC_ID \
@@ -444,17 +464,18 @@ export DEFAULT_SUBNET_IDS=$(aws ec2 describe-subnets  \
 echo $DEFAULT_SUBNET_IDS
 ```
 
-launch the following command to create the new for the backend flask so that the enable executecommand is active (Note that this function can active only using the CLI)
+Launch the command below from `aws-bootcamp-cruddur-2024` to create the new service for backend flask so that the enable `executecommand` is active (Note that this function can only activated only using the CLI)
 
 ```
 aws ecs create-service --cli-input-json file://aws/json/service-backend-flask.json
 
 ```
+I was having challenges starting the service, make sure that the `VPC-connect endpoint` has been setup. <br/>
 
 
-how to connect to the containers using the session manager tool for ubuntu
+### Connect to the containers using the session manager tool for ubuntu
 
-install the session manager. here is the [reference](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html#install-plugin-linux)
+Install Session manager. here is the [reference](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html#install-plugin-linux)
 
 ```
 curl "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_64bit/session-manager-plugin.deb" -o "session-manager-plugin.deb"
@@ -466,20 +487,20 @@ session-manager-plugin
 
 ```
 
-connect to the command:
+connect to the service:
 ```
 aws ecs execute-command  \
     --region $AWS_DEFAULT_REGION \
     --cluster cruddur \
-    --task TOBECHANGED \
+    --task <TaskName> \
     --container backend-flask \
     --command "/bin/bash" \
     --interactive
   ```
 
-Note: the execute command is possible to active via console. therefore need to be recreate the task/service via cli
+Note: the execute command is only possible via CLI.
 
-add the following code inside the gitpod.yml
+Add the Fargate dependency to gitpod.yml:
 
 ```
 name: fargate
@@ -490,9 +511,10 @@ name: fargate
 
 ```
 
-create the new folder called ssm inside the following path
-/backend-flask/bin/
-and create the new file connect-to-service and apply the chmod u+x
+Create the folder `ecs` on the following path:
+`/backend-flask/bin/` <br/>
+Create the new file `connect-to-service` and make it executable `chmod u+x bin/ecs/connect-to-service`<br />
+Supply the task ID for backend-flask.
 
 ```
 #! /usr/bin/bash
@@ -518,11 +540,12 @@ aws ecs execute-command  \
     --command "/bin/bash" \
     --interactive
 ```
+In the CLI, we can list our tasks by running:
+`aws ecs list-tasks --cluster cruddur`
 
+Create a load balancer to control traffic to the backend container:
 
-create load balancer to set in front of the backend container
-
-add the following code on your service-backend-flask.json
+add the following code to `service-backend-flask.json`
 
 ```
 "loadBalancers": [
@@ -692,7 +715,7 @@ docker build \
 
 ```
 
-To point to the url of the load balancer
+To point to the url of the load balancer:
 ```
 docker build \
 --build-arg REACT_APP_BACKEND_URL="http://cruddur-alb-1044769460.us-east-1.elb.amazonaws.com:4567" \
@@ -707,7 +730,7 @@ docker build \
 ```
 
 
-create the repo for the frontend ECR
+create the repo for the frontend ECR:
 
 ```
 aws ecr create-repository \
@@ -716,31 +739,31 @@ aws ecr create-repository \
 ```
 
 
-and set the env var
+and set the env var:
 
 ```
 export ECR_FRONTEND_REACT_URL="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/frontend-react-js"
 echo $ECR_FRONTEND_REACT_URL
 ```
 
-tag the image
+Tag the image:
 
 ```
 docker tag frontend-react-js:latest $ECR_FRONTEND_REACT_URL:latest
 ```
 
-and we push to the repo in ecr
+Test locally:
+```
+docker run --rm -p 3000:3000 -it frontend-react-js 
+
+```
+
+Push the repo to ecr:
 
 ```
 docker push $ECR_FRONTEND_REACT_URL:latest
 ```
 
-
-Before pushing, test locally
-```
-docker run --rm -p 3000:3000 -it frontend-react-js 
-
-```
 
 create the the task definition for the frontend-react-js
 

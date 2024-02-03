@@ -6,8 +6,7 @@ Week6 fargate
 
 First we need to create a script to check if we can estabilish a connection with the RDS
 
-this is the script
-backend-flask/bin/db/test
+script: `backend-flask/bin/db/test`
 
 ```
 #!/usr/bin/env python3
@@ -29,7 +28,7 @@ finally:
   conn.close()
 
 ```
-change the file permissions using: `chmod u+x backend-flask/bin/db/test`
+change the file permissions: `chmod u+x backend-flask/bin/db/test`
 
 The next step is to create a health check of our `backend-flask` container
 add the following code inside the app.py and optionally remove the rollbar test.
@@ -40,7 +39,7 @@ def health_check():
   return {'success': True}, 200
 ```
 
-We'll create a new bash script on bin/flask/health-check:
+We'll create a new bash script for it bin/flask/health-check:
 
 ```
 #!/usr/bin/env python3
@@ -62,7 +61,7 @@ except Exception as e:
   print(e)
   exit(1) # false
 ```
-chmod u+x ./backend-flask/bin/flask/health-check 
+`chmod u+x ./backend-flask/bin/flask/health-check` 
 
 The next step is to create the cloudwatch log group. use the following command using the terminal:
 ```
@@ -86,7 +85,7 @@ aws ecs create-cluster \
 --service-connect-defaults namespace=cruddur
 ```
 
-The next step is to prepare our docker configuration.
+The next step is to prepare our docker configuration. <br />
 We need to create 3 repo's in ECR. 
 - Python, 
 - backend-flask and 
@@ -99,7 +98,7 @@ aws ecr create-repository \
   --image-tag-mutability MUTABLE
 ```
 
-Login to ECR using the following command (Note this has to be done everytime you need to connect to ECR):
+Login to ECR using the following command **(Note this has to be done everytime you need to connect to ECR)**:
 ```
 aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com"
 
@@ -201,67 +200,7 @@ aws ssm put-parameter --type "SecureString" --name "/cruddur/backend-flask/OTEL_
 
 Create the required policies for the container:
 
-Create another json file under this path aws/policies/service-execution-policy.json
-```sh
-{
-    "Version":"2012-10-17",
-    "Statement":[{
-        "Action":["sts:AssumeRole"],
-        "Effect":"Allow",
-        "Principal":{
-          "Service":["ecs-tasks.amazonaws.com"]
-      }},{
-        "Effect": "Allow",
-        "Action": [
-            "ssm:GetParameters",
-            "ssm:GetParameter"
-        ],
-        "Resource": "arn:aws:ssm:us-east-1:652162945585:parameter/cruddur/backend-flask/*" 
-      }]
-}
-```
-From `aws-bootcamp-cruddur-2024` Deploy `service-execution-policy.json` by:
-```sh
- aws iam create-role \   
- --role-name CruddurServiceExecutionRole \    
- --assume-role-policy-document file://aws/policies/service-execution-policy.json
-```
-
-
-
-create the new trust entities json file under this path aws/policies/service-assume-role-execution-policy.json
-
-```py
-{
-    "Version":"2012-10-17",
-    "Statement":[{
-        "Action":["sts:AssumeRole"],
-        "Effect":"Allow",
-        "Principal":{
-          "Service":["ecs-tasks.amazonaws.com"]
-      }}]
-  }
-```
-from `/workspace/aws-bootcamp-cruddur-2024` run the following commands on CLI:
-```
-aws iam create-role \
-    --role-name CruddurServiceExecutionRole \
-    --assume-role-policy-document file://aws/policies/service-execution-policy.json
-```
-
-
-```
-aws iam put-role-policy \
-    --policy-name CruddurServiceExecutionPolicy \
-    --role-name CruddurServiceExecutionRole  \
-    --policy-document file://aws/policies/service-assume-role-execution-policy.json
-```
-
-via console attach the following policy:
-make sure to attach to the CruddurServiceExecutionRole the CloudWatchFullAccess
-
-
-Create the task role:
+Create the task role `CruddurTaskRole`:
 
 ```
 aws iam create-role \
@@ -278,7 +217,7 @@ aws iam create-role \
 }"
 ```
 
-Attach the policy to allow us to use Session manager:
+Attach the policy to allow use of Session manager:
 ```
 aws iam put-role-policy \
   --policy-name SSMAccessPolicy \
@@ -301,15 +240,126 @@ aws iam put-role-policy \
 
 ```
 
-Give access to cloudwatch to the cruddurtaskrole:
+Give access to cloudwatch to the `cruddurtaskrole`:
 ```
 aws iam attach-role-policy --policy-arn arn:aws:iam::aws:policy/CloudWatchFullAccess --role-name CruddurTaskRole
 ```
-Attach a policy to write to the xraydaemon:
+Attach a policy to give write access to the xraydaemon:
 ```
 aws iam attach-role-policy --policy-arn arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess --role-name CruddurTaskRole
 ```
 
+```sh
+aws iam put-role-policy \
+    --policy-name CruddurServiceExecutionPolicy \
+    --role-name CruddurServiceExecutionRole \
+    --policy-document file://aws/policies/service-execution-policy.json
+```
+
+from `/workspace/aws-bootcamp-cruddur-2024` run the following commands on CLI:
+```sh
+aws iam create-role \
+    --role-name CruddurServiceExecutionPolicy \
+    --assume-role-policy-document file://aws/policies/service-assume-role-execution-policy.json
+```
+
+Create the new trust entities json file under the path `aws/policies/service-assume-role-execution-policy.json`
+
+```py
+{
+  "Version":"2012-10-17",
+  "Statement":[{
+      "Action":["sts:AssumeRole"],
+      "Effect":"Allow",
+      "Principal":{
+        "Service":["ecs-tasks.amazonaws.com"]
+    }}]
+}
+```
+
+Create another json file under the path `aws/policies/service-execution-policy.json`:
+```sh
+{
+    "Version":"2012-10-17",
+    "Statement":[{
+        "Action":["sts:AssumeRole"],
+        "Effect":"Allow",
+        "Principal":{
+          "Service":["ecs-tasks.amazonaws.com"]
+      }},{
+        "Effect": "Allow",
+        "Action": [
+            "ssm:GetParameters",
+            "ssm:GetParameter"
+        ],
+        "Resource": "arn:aws:ssm:us-east-1:652162945585:parameter/cruddur/backend-flask/*" 
+      }]
+}
+```
+
+```sh
+aws iam put-role-policy \
+    --policy-name CruddurServiceExecutionPolicy \
+    --role-name CruddurServiceExecutionRole  \
+    --policy-document file://aws/policies/service-execution-policy.json
+```
+
+Via console attach the following policy:
+Make sure to attach `CruddurServiceExecutionRole` to  `CloudWatchFullAccess`.
+
+We were having some trouble hence confirm the permissions as below: <br />
+> CruddurServiceExecutionPolicy
+```js
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": [
+                "ssm:GetParameters",
+                "ssm:GetParameter",
+                "secretsmanager:*",
+                "cloudwatch:*"
+            ],
+            "Resource": "arn:aws:ssm:us-east-1:652162945585:parameter/cruddur/backend-flask/*"
+        },
+        {
+            "Sid": "VisualEditor1",
+            "Effect": "Allow",
+            "Action": [
+                "ecr:GetDownloadUrlForLayer",
+                "ecr:BatchGetImage",
+                "ecr:GetAuthorizationToken",
+                "ecr:BatchCheckLayerAvailability",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+            ],
+            "Resource": "arn:aws:ssm:us-east-1:652162945585:parameter/cruddur/backend-flask/*"
+        }
+    ]
+}
+
+```
+> CruddurServiceExecutionRole
+- Attach CloudWatchFullAccess and CruddurServiceExecutionPolicy
+> CruddurTaskRole
+- Attach `AWSXRayDaemonWriteAccess` , `CloudWatchFullAccess`, `SSMAccessPolicy`. <br />
+Trust relationship:
+```js
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "Service": "ecs-tasks.amazonaws.com"
+            },
+            "Action": "sts:AssumeRole"
+        }
+    ]
+}
+```
 ## Task definition creation via cli
 
 Create a new file /aws/task-definitions/backend-flask.json
@@ -405,7 +455,7 @@ export CRUD_SERVICE_SG=$(aws ec2 create-security-group \
 echo $CRUD_SERVICE_SG
 ```
 
-You could also hard code the SG value if the SG already exists:
+You could also hard code the SG value if the SG already exists (replace with yours):
 ```
   export CRUD_SERVICE_SG="sg-08050161e2ec5f683"
 ```
@@ -470,7 +520,6 @@ Launch the command below from `aws-bootcamp-cruddur-2024` to create the new serv
 aws ecs create-service --cli-input-json file://aws/json/service-backend-flask.json
 
 ```
-I was having challenges starting the service, make sure that the `VPC-connect endpoint` has been setup. <br/>
 
 
 ### Connect to the containers using the session manager tool for ubuntu

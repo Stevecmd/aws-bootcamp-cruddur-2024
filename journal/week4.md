@@ -47,7 +47,6 @@ aws rds create-db-instance \
   --no-deletion-protection
 ```
 Once the commands run, confirm creation on the web interface.
-
 Postgres should already be setup but check `docker-compose.yml` to confirm that the following code exists:
 ```
   db:

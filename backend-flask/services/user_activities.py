@@ -13,7 +13,7 @@ class UserActivities:
     else:
       now = datetime.now()
       results = [{
-        'uuid': '248959df-3079-4947-b847-9e0892d1bab4',
+        'uuid': 'a901d29f-dfb2-4cdd-b14e-8d367e8048d7',
         'handle':  'Andrew Brown',
         'message': 'Cloud is fun!',
         'created_at': (now - timedelta(days=1)).isoformat(),

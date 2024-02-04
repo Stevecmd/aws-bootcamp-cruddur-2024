@@ -217,7 +217,8 @@ def data_create_message():
 def data_home():
   access_token = extract_access_token(request.headers)
   try:
-    claims = cognito_token.verify(access_token)
+    # claims = cognito_token.verify(access_token)
+    claims = cognito_jwt_token.verify(access_token)
     # authenticated request
     app.logger.debug("authenticated")
     app.logger.debug(claims)

@@ -18,18 +18,3 @@ class HomeActivities:
       results = db.query_array_json(sql)
 
       return results
-      
-      # if cognito_user_id != None:
-      #   extra_crud = {
-      #   'uuid': '248959df-3079-4947-b847-9e0892d1bab4',
-      #   'handle':  'Darth Sidious',
-      #   'message': 'Your feeble skills are no match for the power of the Dark Side.',
-      #   'created_at': (now - timedelta(hours=1)).isoformat(),
-      #   'expires_at': (now + timedelta(hours=12)).isoformat(),
-      #   'likes': 0,
-      #   'replies': []
-      # }
-      
-      #   results.insert(0,extra_crud)
-      
-      # return results

@@ -4,7 +4,6 @@ from flask_cors import CORS, cross_origin
 import os
 import sys
 
-from services.users_short import *
 from services.home_activities import *
 from services.notifications_activities import *
 from services.user_activities import *
@@ -15,6 +14,11 @@ from services.message_groups import *
 from services.messages import *
 from services.create_message import *
 from services.show_activity import *
+from services.users_short import *
+
+from services.show_activity import ShowActivities
+
+from flask import Flask, render_template  # Import render_template
 
 # Import CognitoJwtToken
 from lib.cognito_jwt_token import CognitoJwtToken, extract_access_token, TokenVerifyError
@@ -211,7 +215,7 @@ def data_create_message():
     app.logger.debug(e)
     return {}, 401
     
-@app.route("/api/activities/home", methods=['GET'])
+@app.route("/api/home", methods=['GET'])
 # @xray_recorder.capture('activities_home')
 def data_home():
   access_token = extract_access_token(request.headers)
@@ -230,10 +234,10 @@ def data_home():
     data = HomeActivities.run()
   return data, 200
 
-@app.route("/api/activities/notifications", methods=['GET'])
+@app.route("/api/notifications", methods=['GET'])
 def data_notifications():
-  data = NotificationsActivities.run()
-  return data, 200
+    data = NotificationsActivities.run()
+    return data, 200
 
 @app.route("/api/activities/@<string:handle>", methods=['GET'])
 # @xray_recorder.capture('activities_users')
@@ -270,7 +274,7 @@ def data_activities():
 @app.route("/api/activities/<string:activity_uuid>", methods=['GET'])
 # @xray_recorder.capture('activities_show')
 def data_show_activity(activity_uuid):
-  data = ShowActivity.run(activity_uuid=activity_uuid)
+  data = ShowActivities.run(activity_uuid=activity_uuid)
   return data, 200
 
 @app.route("/api/activities/<string:activity_uuid>/reply", methods=['POST','OPTIONS'])

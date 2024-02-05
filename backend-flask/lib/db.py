@@ -59,14 +59,22 @@ class Db: #using a constructor to create an instance of the class
       self.print_sql_err(err)
   # when we want to return a json object
   def query_array_json(self,sql,params={}):
+    # Print the SQL query with parameters
     self.print_sql('array',sql,params)
 
+    # Wrap the SQL query
     wrapped_sql = self.query_wrap_array(sql)
+    # Establish a connection and execute the query
     with self.pool.connection() as conn:
       with conn.cursor() as cur:  
         cur.execute(wrapped_sql,params)
         json = cur.fetchone()
-        return json[0]
+        # Check if json_result is not None before accessing its elements
+        if json is not None:
+            return json[0]
+        else:
+            # Handle the case when the query result is None
+            return None
   # When we want to return an array of json objects
   def query_object_json(self,sql,params={}):
 

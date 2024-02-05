@@ -12,9 +12,20 @@ class MessageGroups:
     }
 
     sql = db.template('users','uuid_from_cognito_user_id')
-    my_user_uuid = db.query_value(sql,{
-      'cognito_user_id': cognito_user_id
-    })
+    # Debugging
+    print("SQL Query:", sql)
+    # End Debugging
+
+    # Debug
+    try:
+        my_user_uuid = db.query_value(sql, {'cognito_user_id': cognito_user_id})
+    except Exception as e:
+        print("Error in query_value:", e)
+    # end debug
+
+    # my_user_uuid = db.query_value(sql,{
+    #   'cognito_user_id': cognito_user_id
+    # })
 
     print(f"UUID: {my_user_uuid}")
 

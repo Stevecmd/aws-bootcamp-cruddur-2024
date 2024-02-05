@@ -1,4 +1,4 @@
-from psycopg_pool import ConnectionPool
+from psycopg_pool import ConnectionPool, PoolTimeout
 import os
 import re
 import sys
@@ -76,21 +76,32 @@ class Db: #using a constructor to create an instance of the class
             # Handle the case when the query result is None
             return None
   # When we want to return an array of json objects
-  def query_object_json(self,sql,params={}):
+  def query_object_json(self,sql,uuid, params={}):
+    """
+    Run a query and return a single JSON object.
 
-    self.print_sql('json',sql,params)
+    :param sql: SQL template string
+    :param uuid: UUID parameter for the query
+    :param params: Additional parameters
+    :return: JSON object
+    """
+    self.print_sql('json', sql, params)
     self.print_params(params)
+
+    # Add the 'uuid' key to the params dictionary
+    params['uuid'] = uuid
+
     wrapped_sql = self.query_wrap_object(sql)
 
     with self.pool.connection() as conn:
       with conn.cursor() as cur:
-        cur.execute(wrapped_sql,params)
+        cur.execute(wrapped_sql, params)
         json = cur.fetchone()
         if json == None:
-          "{}"
           return "{}"
         else:
           return json[0]
+
   def query_value(self,sql,params={}):
     self.print_sql('value',sql,params)
     with self.pool.connection() as conn:
@@ -113,19 +124,23 @@ class Db: #using a constructor to create an instance of the class
     ) array_row);
     """
     return sql
-  def print_sql_err(self,err):
+  def print_sql_err(self, err):
     # get details about the exception
-    err_type, err_obj, traceback = sys.exc_info()
+    err_type, _, traceback = sys.exc_info()
 
-    # get the line number when exception occured
+    # get the line number when the exception occurred
     line_num = traceback.tb_lineno
 
     # print the connect() error
-    print ("\npsycopg ERROR:", err, "on line number:", line_num)
-    print ("psycopg traceback:", traceback, "-- type:", err_type)
+    print("\npsycopg ERROR:", err, "on line number:", line_num)
+    print("psycopg traceback:", traceback, "-- type:", err_type)
 
-    # print the pgcode and pgerror exceptions
-    print ("pgerror:", err.pgerror)
-    print ("pgcode:", err.pgcode, "\n")
+    # check if the error is related to a connection timeout
+    if "timeout expired" in str(err):
+        print("Connection timeout expired. Please check your database connection.")
+    else:
+        # print other types of errors
+        print("pgerror:", getattr(err, 'pgerror', None))
+        print("pgcode:", getattr(err, 'pgcode', None), "\n")
 
 db = Db()

@@ -2489,7 +2489,7 @@ for i in range(len(lines)):
     )
 
 ```
-The reults were that I realized that the issue was starting up DynamoDB-local. I then changed the code in `docker-compose.yml` to:
+The results: Starting up DynamoDB-local was the issue. I then changed the code in `docker-compose.yml` to:
 ```py
   # Dynamo Database configuration ---- Start -----------
   dynamodb-local:
@@ -2508,6 +2508,23 @@ The reults were that I realized that the issue was starting up DynamoDB-local. I
     networks:
       - internal-network
   # Dynamo Database configuration ---- End -----------
+```
+Routes:
+Health-check: 
+```html
+https://4567-<GITPOD Address>.gitpod.io/api/health-check
+```
+Home:
+```html
+https://4567-<GITPOD Address>.gitpod.io/api/activities/home
+```
+Notifications:
+```html
+https://4567-<GITPOD Address>.gitpod.io/api/activities/notifications
+```
+Messages:
+```html
+https://4567-<GITPOD Address>.gitpod.io/api/activities/messages
 ```
 
 ## Save the work on its own branch named "week-5"

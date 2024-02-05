@@ -1123,11 +1123,11 @@ The command below will scan the existing data in the table.
 ```
 ./bin/ddb/scan
 ```
-**NB**
+**NB**  <br/>
 Only use `drop` if you want to delete a table:<br/>
 `./bin/ddb/drop cruddur-messages prod`
 
-Run:
+Run: <br/>
 `./bin/db/create` - To create a database. <br/>
 `./bin/db/schema-load` - To load our schema to the database.<br/>
 `./bin/db/seed` - To load our data to the database.<br/>
@@ -1155,7 +1155,7 @@ VALUES
     current_timestamp + interval '10 day'
   )
   ```
-To list users' data saved in AWS Cognito, create the backend-flask/bin/cognito/list-users script.
+To list `users` data saved in AWS Cognito, create the backend-flask/bin/cognito/list-users script.
 ```
 #!/usr/bin/env python3
 
@@ -1385,7 +1385,8 @@ for i in range(len(lines)):
     raise 'invalid line'
 ```
 The code below sets the time to -3 hours but this part is not mandatory, set it as per your timezone.
-```created_at = (now + timedelta(hours=-3) + timedelta(minutes=i)).isoformat()
+```
+  created_at = (now + timedelta(hours=-3) + timedelta(minutes=i)).isoformat()
   create_message(
     client=ddb,
     message_group_uuid=message_group_uuid,

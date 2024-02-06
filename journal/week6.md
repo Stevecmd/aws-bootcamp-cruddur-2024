@@ -513,6 +513,10 @@ export DEFAULT_SUBNET_IDS=$(aws ec2 describe-subnets  \
  --output json | jq -r 'join(",")')
 echo $DEFAULT_SUBNET_IDS
 ```
+Some permissions were missing so I had to run:
+```sh
+aws iam attach-role-policy --role-name CruddurServiceExecutionRole --policy-arn arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+```
 
 Launch the command below from `aws-bootcamp-cruddur-2024` to create the new service for backend flask so that the enable `executecommand` is active (Note that this function can only activated only using the CLI)
 

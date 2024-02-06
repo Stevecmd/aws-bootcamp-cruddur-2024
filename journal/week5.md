@@ -2525,6 +2525,10 @@ Messages:
 ```html
 https://4567-<GITPOD Address>.gitpod.io/api/activities/messages
 ```
+Message group:
+```html
+https://4567-stevecmd-awsbootcampcru-xxgo7kctld4.ws-eu108.gitpod.io/api/activities/message_group
+```
 
 ## Save the work on its own branch named "week-5"
 ```sh
@@ -2582,3 +2586,6 @@ you can keep it as is. If you no longer need the branch, you can delete it after
 git branch -d week-5  # Deletes the local branch
 git push origin --delete week-5  # Deletes the remote branch
 ```
+
+
+

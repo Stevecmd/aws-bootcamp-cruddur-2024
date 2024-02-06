@@ -141,7 +141,7 @@ The command to start `backend-flask` and `db` using the cli is:
 ```
 docker compose up backend-flask db
 ```
-Visit the backend port(4567) and append `/api/health-check` to check for the response, it should return:
+Visit the backend port:**(4567)** and append `/api/health-check` to check for the response, it should return:
 ```sh
 success: true
 ```
@@ -1032,10 +1032,9 @@ It may fail due to the Security group not having the correct permissions, update
 ```sh
 aws ecs create-service --generate-cli-skeleton
 ```
-Create a `load balancer` to control traffic to the backend container:
+Create a `load balancer` to control traffic to the containers:
 
-Add the following code to `service-backend-flask.json` and fill in the details:
-
+Add the following code to `service-backend-flask.json` and `service-frontend-react-js.json` and fill in the details: <br />
 ```py
 "loadBalancers": [
       {
@@ -1045,19 +1044,58 @@ Add the following code to `service-backend-flask.json` and fill in the details:
       }
     ],
 ```
-**Hint:** <br />
-On the targetGroupArn, insert the `arn` of the Load balancer target group, the targetgroup here is `backend-flask`
-on containerPort `4567`.
+Details: <br />
+`backend`
+- targetGroupArn - "`arn:aws:elasticloadbalancing:<input backend TG arn>`"
+- containerName - "`backend-flask` ",
+- `containerPort` - 4567
 
-Stop and Delete the running containers on ECS. <br />
-Restart them:
+`frontend`
+- targetGroupArn - "`arn:aws:elasticloadbalancing:<input frontend TG arn>`"
+- containerName - "`frontend-react-js` ",
+- `containerPort` - 3000
+
+Get the Load balancer DNS name and rebuild the container while in the `frontend-react-js` directory:
+
+```sh
+docker build \
+--build-arg REACT_APP_BACKEND_URL="http://cruddur-alb-<account-number>.<region>.elb.amazonaws:4567" \
+--build-arg REACT_APP_AWS_PROJECT_REGION="$AWS_DEFAULT_REGION" \
+--build-arg REACT_APP_AWS_COGNITO_REGION="$AWS_DEFAULT_REGION" \
+--build-arg REACT_APP_AWS_USER_POOLS_ID="$AWS_USER_POOLS_ID" \
+--build-arg REACT_APP_CLIENT_ID="$APP_CLIENT_ID" \
+-t frontend-react-js \
+-f Dockerfile.prod \
+.
+```
+Tag the Image and push it:
+```
+docker tag frontend-react-js-prod:latest $ECR_FRONTEND_REACT_URL:latest
+docker push $ECR_FRONTEND_REACT_URL:latest
+```
+Stop and Delete any previously running containers on ECS. <br />
+From `aws-bootcamp-cruddur-2024` <br />
+Create new Task definitions: <br />
+Frontend: <br />
+```
+aws ecs register-task-definition --cli-input-json file://aws/task-definitions/frontend-react-js.json
+```
+Backend: <br />
+```sh
+aws ecs register-task-definition --cli-input-json file://aws/task-definitions/backend-flask.json
+```
+
+Redeploy the services: <br />
+```sh
+aws ecs create-service --cli-input-json file://aws/json/service-frontend-react-js.json
+```
 ```sh
 aws ecs create-service --cli-input-json file://aws/json/service-backend-flask.json
 ```
 If it fails, go to the security group `cruddur-alb-sg` and create a temporary rule that allows coonections from anywhere on ports `4567` and `3000`. They can be named `TMP1` and `TMP2`. <br />
 Confirm Load balancer and ECS are online, <br />
 Visit the ECS public port and append `:4567/api/health-check`. <br />
-It should return `success`.
+- It should return `success`.
 Similarly, you should be able to visit the other routes:
 ```txt
 <load balancer DNS Name>:4567/api/activities/home
@@ -1065,8 +1103,8 @@ Similarly, you should be able to visit the other routes:
 <load balancer DNS Name>:4567/api/activities/messages
 <load balancer DNS Name>:4567/api/activities/message_group
 ```
-**Extra**
-To enable cloudwatch logs on the console: <br />
+**Extra** <br />
+To enable cloudwatch logs on the Load balancer via the console: <br />
 - Create a new S3 Bucket eg `cruddur-alb-access-logs-2024`, same region as the `Load Balancer`, 
 Uncheck `Block all public access`.
 Check `Block the ACL permissions`.
@@ -1075,10 +1113,16 @@ Encryption: `Amazon S3 Managed Keys(SSE-S3)`
 - From the ALB page, go to `Attributes` > `Edit` > Enable `Access Logs` (Incurs cost)
 - Select the S3 bucket created: `s3://cruddur-alb-access-logs-2024`
 - Create
-- It might fail and this has to do with creating the appropriate bucket policy as per your region and referencing the correct ALB account as provided by the docs.
+- It might fail and this has to do with creating the appropriate bucket policy as per your region and referencing the correct ALB account as provided by the docs. <br />
+Refer to `https://docs.aws.amazon.com/general/latest/gr/elb.html` <br />
+Confirm the front-end task definion is okay. `aws` > `task-definitions` > `frontend-react-js.json`. <br />
+Create Production Dockerfile. <br />
+Refer to: <br />
+1. [Monitor your Application Load Balancers](https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-monitoring.html) <br />
+2. [CloudWatch metrics for your Application Load Balancer](https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-cloudwatch-metrics.html) 
+3. [Monitoring load balancers using Amazon CloudWatch anomaly detection alarms](https://aws.amazon.com/blogs/networking-and-content-delivery/monitoring-load-balancers-using-amazon-cloudwatch-anomaly-detection-alarms/) 
+4. [CloudWatch metrics for your Application Load Balancer](https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-cloudwatch-metrics.html#load-balancer-metric-table)
 
-Confirm the front-end task definion is okay. `aws` > `task-definitions` > `frontend-react-js.json`.
-Create Production Dockerfile.
 
 
 # Implementation of the SSL and configuration of Domain from Route53

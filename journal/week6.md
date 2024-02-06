@@ -968,7 +968,7 @@ Do the same for the frontend `service-frontend-react-js.json`:
     }
   }
 ```
-**Application Load Balancer**
+**Application Load Balancer** <br />
 Create a new Security group:
 - Name: `cruddur-alb-sg`
 - Description: `cruddur-alb-sg`
@@ -1045,7 +1045,7 @@ Add the following code to `service-backend-flask.json` and fill in the details:
       }
     ],
 ```
-Hint: <br />
+<bold> Hint: </bold> <br />
 On the targetGroupArn, insert the `arn` of the Load balancer target group, the targetgroup here is `backend-flask`
 on containerPort `4567`.
 
@@ -1138,9 +1138,9 @@ Note: make sure to open the SG of the container backend flask from the SG of the
 
 # Securing Backend flask
 
-In this part of implementation, we need to create 2 docker file. 
+In this part of implementation, we need to create 2 docker files. 
 
-1. `Dockerfile` with the following code which has the debug on:
+1. `Dockerfile` with the following code which the debugging on:
 ```sh
 FROM <account-number>.dkr.ecr.us-east-1.amazonaws.com/cruddur-python:3.10-slim-buster
 
@@ -1155,7 +1155,7 @@ EXPOSE ${PORT}
 CMD [ "python3", "-m" , "flask", "run", "--host=0.0.0.0", "--port=4567", "--debug"]
 ```
 
-the other file called Dockerfile.prod with the following code which does not have the debug, the debugger and the reload active.
+the other file called Dockerfile.prod with the following code which does not debugging enabled.
 
 ```sh
 FROM <account-number>.dkr.ecr.us-east-1.amazonaws.com/cruddur-python:3.10-slim-buster
@@ -1175,9 +1175,10 @@ CMD [ "python3", "-m" , "flask", "run", "--host=0.0.0.0", "--port=4567", "--no-d
 ```
 
 Make sure to test the docker production changes before pushing the image to the ECR repo.
-In our case, we run the docker compose up using the dockerfile rather than recall the build and run process.
+In this case run `docker compose up` using the dockerfile rather than deploying the build and run process.
 
-Below are the scripts for the building of backend and frontend:
+Below are the scripts for the building the repo's: <br /> 
+<bold> backend </bold>:
 
 ```
 #! /usr/bin/bash
@@ -1194,7 +1195,8 @@ docker build \
 -t backend-flask-prod \
 "$BACKEND_FLASK_PATH/."
 ```
-Note that the REACT_APP_BACKEND_URL should point to your domain instead to your gitpod/codespace
+Note that the REACT_APP_BACKEND_URL should point to your domain instead to your gitpod/codespace. <br />
+<bold>frontend </bold> <br />
 ```
 #! /usr/bin/bash
 
@@ -1209,7 +1211,7 @@ docker build \
 .
 ```
 
-and the script to run the image for the backend
+and the script to run the backend image: 
 ```
 #! /usr/bin/bash
 
@@ -1232,7 +1234,6 @@ docker run --rm \
 --env AWS_COGNITO_USER_POOL_CLIENT_ID="${APP_CLIENT_ID}" \
 -it backend-flask-prod
 ```
-
 
 Push the image to ecr. 
 Create a script under `/backend-flask/bin/docker/push/backend-flask-prod`

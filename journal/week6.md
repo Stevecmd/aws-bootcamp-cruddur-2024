@@ -4,7 +4,7 @@
 This week we start to implement AWS ECS with fargate.
 ### RDS
 
-Create a script to check if we can estabilish a connection with the RDS
+Create a script to check if we can estabilish a connection with the RDS:
 
 script: `backend-flask/bin/db/test`
 
@@ -563,8 +563,8 @@ name: fargate
 
 Create the folder `ecs` on the following path:
 `/backend-flask/bin/` <br/>
-Create the new file `connect-to-service` and make it executable `chmod u+x bin/ecs/connect-to-service`<br />
-Supply the task ID for backend-flask.
+
+Create the new file `connect-to-service` with the code below and make it executable `chmod u+x bin/ecs/connect-to-service`<br />
 
 ```sh
 #! /usr/bin/bash
@@ -590,25 +590,10 @@ aws ecs execute-command  \
     --command "/bin/bash" \
     --interactive
 ```
+Supply the task ID for backend-flask when running it.
+
 In the CLI, we can list our tasks by running:
 `aws ecs list-tasks --cluster cruddur`
-
-Create a load balancer to control traffic to the backend container:
-
-add the following code to `service-backend-flask.json`
-
-```py
-"loadBalancers": [
-      {
-          "targetGroupArn": "",
-          "containerName": "",
-          "containerPort": 0
-      }
-    ],
-```
-on the targetGroupArn insert the arn ot the target group in this case the targetgroup for the backend-flask
-on containername backend-flask
-on containport 4567
 
 For the **Frontend** repo:
 We create the task for the frontend-react-js.
@@ -761,7 +746,6 @@ docker build \
 -t frontend-react-js \
 -f Dockerfile.prod \
 .
-
 ```
 
 If you have a Load balancer in place you can point to the url of the load balancer:
@@ -775,9 +759,7 @@ docker build \
 -t frontend-react-js \
 -f Dockerfile.prod \
 .
-
 ```
-
 
 Create the repo for the frontend ECR:
 
@@ -787,7 +769,6 @@ aws ecr create-repository \
   --image-tag-mutability MUTABLE
 ```
 
-
 Set the env var:
 
 ```sh
@@ -796,7 +777,6 @@ echo $ECR_FRONTEND_REACT_URL
 ```
 
 Tag the image:
-
 ```sh
 docker tag frontend-react-js:latest $ECR_FRONTEND_REACT_URL:latest
 echo $ECR_FRONTEND_REACT_URL
@@ -809,11 +789,9 @@ docker run --rm -p 3000:3000 -it frontend-react-js
 ```
 
 Push the repo to ecr:
-
 ```
 docker push $ECR_FRONTEND_REACT_URL:latest
 ```
-
 
 Create the `task definition` for the frontend-react-js in `aws` > `task-definitions` > `frontend-react-js.json`
 
@@ -855,7 +833,8 @@ Create the `task definition` for the frontend-react-js in `aws` > `task-definiti
   }
 ```
 
-Create the service `service-frontend-react-js.json` in `aws` > `json` 
+Create the service `service-frontend-react-js.json` in `aws` > `json`:
+**We are launching it without a load balancer so that we can shell into it and inspect it.**
 ```
 {
     "cluster": "cruddur",
@@ -905,19 +884,37 @@ Launch the task definition for the `front end`:
 aws ecs register-task-definition --cli-input-json file://aws/task-definitions/frontend-react-js.json
 ```
 
-
-
-If you encounter a problem with the frontend image, create the image locally (pointing to the local env) and launch it locally:
-
+If you encounter a problem with the frontend image, build the image locally (pointing to the local env), within the folder `frontend-react-js` and build it locally then run it:
+```sh
+docker build \
+--build-arg REACT_APP_BACKEND_URL="https://4567-$GITPOD_WORKSPACE_ID.$GITPOD_WORKSPACE_CLUSTER_HOST" \
+--build-arg REACT_APP_AWS_PROJECT_REGION="$AWS_DEFAULT_REGION" \
+--build-arg REACT_APP_AWS_COGNITO_REGION="$AWS_DEFAULT_REGION" \
+--build-arg REACT_APP_AWS_USER_POOLS_ID="$AWS_USER_POOLS_ID" \
+--build-arg REACT_APP_CLIENT_ID="$APP_CLIENT_ID" \
+-t frontend-react-js \
+-f Dockerfile.prod \
+.
+```
+Run the container:
+```sh
+docker run --rm -p 3000:3000 -dt frontend-react-js
+```
+Find the container ID and inspect it:
 ```
 docker ps
 
 docker inspect <docker-container-number>
 ```
+Once done, redeploy it to ECS by refistering the task definition and restarting the service. <br />
+Note that by default bash is not included with busybox and alpine linux.
+**Bash and sh are not the same** <br />
 
-Note by default bash is not included with busybox and alpine linux
-
-Insert this a health check in `frontend-react-js-json` under task-definitions:
+To shell into the container run the code below and input the containers number as a parameter: <br />
+```sh
+./bin/ecs/connect-to-service <container-number eg 46e57sd8sd94ds1dsd575gh> frontend-react-js
+```
+Insert this **health check** in `frontend-react-js-json` under `aws > task-definitions`:
 ```py
 "healthCheck": {
           "command": [
@@ -930,9 +927,132 @@ Insert this a health check in `frontend-react-js-json` under task-definitions:
         },
 ```
 
+### Service Connect
+We can also enable service connect by adding the following code to `service-backend-flask.json`:
+```py
+    "serviceConnectConfiguration": {
+      "enabled": true,
+      "namespace": "cruddur",
+      "services": [
+        {
+          "portName": "backend-flask",
+          "discoveryName": "backend-flask",
+          "clientAliases": [{"port": 4567}]
+        }
+      ]
+    },
+    "propagateTags": "SERVICE",
+```
 
-In our case the problem is the communication between the ALB and the target group. 
-<bold>Solution:<bold/> Enable the security group to allow incoming connections on port 3000.
+Do the same for the frontend `service-frontend-react-js.json`:
+```py
+    },
+    "propagateTags": "SERVICE",
+    "serviceName": "frontend-react-js",
+    "taskDefinition": "frontend-react-js",
+    "serviceConnectConfiguration": {
+      "enabled": true,
+      "namespace": "cruddur",
+      "services": [
+        {
+          "portName": "frontend-react-js",
+          "discoveryName": "frontend-react-js",
+          "clientAliases": [{"port": 3000}]
+        }
+      ]
+    }
+  }
+```
+**Application Load Balancer**
+Create a new Security group:
+- Name: `cruddur-alb-sg`
+- Description: `cruddur-alb-sg`
+- Inbound rules: HTTP and HTTPS from anywhere.
+- Outbound rules: Anywhere IPv4 and/or IPv6
+  Once created note the security group ID.
+
+#### Modify original SG.
+The original Security group allowed traffic to your Gitpod IP address on port 4567, we can now add a setting and allow 
+traffic to our security group that we just created, port 4567 as well, description: Cruddur ALB. **You could delete the previous rule.**
+
+### Create a Target Groups
+Frontend TG <br />
+- Target: `IP Addresses`
+- Target group name: `cruddur-frontend-react-js-tg`
+- Protocol: `HTTP` : Port `3000`
+- IP address type: `IPv4`
+- VPC - 'default VPC'
+- Health-check: None
+- Healthy threshold: `3`
+- Interval: '30'
+- Skip `Register targets` and Create.
+
+Backend TG <br />
+- Target: `IP Addresses`
+- Target group name: `cruddur-backend-flask-tg`
+- Protocol: `HTTP` : Port `4567`
+- IP address type: `IPv4`
+- VPC - 'default VPC'
+- Health-check: `/api/health-check`
+- Healthy threshold: `3`
+- Interval: '30'
+- Skip `Register targets` and Create.
+
+- On the console create an **Application Load Balancer**.
+- Load balancer name: `cruddur-alb`
+- Internet facing
+- IPv4
+- VPC: <select your VPC(default)>
+- Subnets (select atleast 2)
+- Security group: SG we just created. `cruddur-alb-sg` **remove the default one**.
+- Listener: HTTP: `4567`
+- Default action: `cruddur-backend-flask-tg`
+- Add a listener on port `3000`.
+- Target: `cruddur-frontend-react-js-tg`
+- Tags: Name: `Cruddur TG`
+- **Create Load Balancer**
+
+Allow communication between the ALB and the target group. 
+<bold>Solution:<bold/> Ensure that the security group allows incoming connections on port 3000.
+
+Confirm that RDS is running then confirm access to RDS, in `backend-flask` run:
+```sh
+./bin/db/test
+```
+It may fail due to the Security group not having the correct permissions, update them by running:
+```
+./bin/db/rds/update-sg-rule
+```
+**NB** - The CLI can provide a template to create various services eg:
+```sh
+aws ecs create-service --generate-cli-skeleton
+```
+Create a load balancer to control traffic to the backend container:
+
+Add the following code to `service-backend-flask.json` and fill in the details:
+
+```py
+"loadBalancers": [
+      {
+          "targetGroupArn": "",
+          "containerName": "",
+          "containerPort": 0
+      }
+    ],
+```
+Hint: <br />
+On the targetGroupArn, insert the `arn` of the Load balancer target group, the targetgroup here is `backend-flask`
+on containerPort `4567`.
+
+Stop and Delete the running containers on ECS. <br />
+Restart them:
+```sh
+aws ecs create-service --cli-input-json file://aws/json/service-backend-flask.json
+```
+If it fails, go to the security group `cruddur-alb-sg` and create a temporary rule that allows coonections from anywhere on ports `4567` and `3000`. They can be named `TMP1` and `TMP2`. <br />
+Confirm Load balancer and ECS are online, <br />
+Visit the ECS public port and append `:4567/api/health-check`. <br />
+It should return `success`,
 
 
 # Implementation of the SSL and configuration of Domain from Route53

@@ -637,7 +637,7 @@ First create the task definitiion called frontend-react-js.json under /aws/task-
 ```
 
 
-create the dockerfile.prod under the frontend-react-js
+create the dockerfile.prod in `frontend-react-js`:
 ```sh
 # Base Image ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 FROM node:16.18 AS build
@@ -669,7 +669,8 @@ COPY --from=build /frontend-react-js/nginx.conf /etc/nginx/nginx.conf
 EXPOSE 3000
 ```
 
-create a file called nginx.conf under the frontend-react-js
+Create the file `nginx.conf` under `frontend-react-js`: <br />
+**NB** Only run one container per process. <br />
 ```py
 # Set the worker processes
 worker_processes 1;
@@ -727,14 +728,18 @@ http {
   }
 }
 ```
+In the `.git-ignore` file add the entry to ignore the frontend build:
+```py
+frontend-react-js/build/*
+```
 
-from the folder frontend-react-js run the command to build:
+from the folder `frontend-react-js` run the command to build:
 
 ```sh
 npm run build
 ```
 
-Build the image pointing to the local env: 
+Build the image pointing to the local env using the commands below: 
 
 ```sh
 docker build \
@@ -1027,7 +1032,7 @@ It may fail due to the Security group not having the correct permissions, update
 ```sh
 aws ecs create-service --generate-cli-skeleton
 ```
-Create a load balancer to control traffic to the backend container:
+Create a `load balancer` to control traffic to the backend container:
 
 Add the following code to `service-backend-flask.json` and fill in the details:
 
@@ -1052,7 +1057,28 @@ aws ecs create-service --cli-input-json file://aws/json/service-backend-flask.js
 If it fails, go to the security group `cruddur-alb-sg` and create a temporary rule that allows coonections from anywhere on ports `4567` and `3000`. They can be named `TMP1` and `TMP2`. <br />
 Confirm Load balancer and ECS are online, <br />
 Visit the ECS public port and append `:4567/api/health-check`. <br />
-It should return `success`,
+It should return `success`.
+Similarly, you should be able to visit the other routes:
+```txt
+<load balancer DNS Name>:4567/api/activities/home
+<load balancer DNS Name>:4567/api/activities/notifications
+<load balancer DNS Name>:4567/api/activities/messages
+<load balancer DNS Name>:4567/api/activities/message_group
+```
+**Extra**
+To enable cloudwatch logs on the console: <br />
+- Create a new S3 Bucket eg `cruddur-alb-access-logs-2024`, same region as the `Load Balancer`, 
+Uncheck `Block all public access`.
+Check `Block the ACL permissions`.
+Once created, go to `Permissions` and upload an access policy that will allow cloudwatch logs access to the ALB as per your region.
+Encryption: `Amazon S3 Managed Keys(SSE-S3)`
+- From the ALB page, go to `Attributes` > `Edit` > Enable `Access Logs` (Incurs cost)
+- Select the S3 bucket created: `s3://cruddur-alb-access-logs-2024`
+- Create
+- It might fail and this has to do with creating the appropriate bucket policy as per your region and referencing the correct ALB account as provided by the docs.
+
+Confirm the front-end task definion is okay. `aws` > `task-definitions` > `frontend-react-js.json`.
+Create Production Dockerfile.
 
 
 # Implementation of the SSL and configuration of Domain from Route53
@@ -1326,7 +1352,7 @@ export async function checkAuth(setUser){
 };
 ```
 
-Replace and add the following code for the following file
+Replace and add the following code for the respective files:
 - rontend-react-js/src/components/MessageForm.js  (the first line of code)
 - frontend-react-js/src/pages/HomeFeedPage.js   (the first line of code)
 - frontend-react-js/src/pages/MessageGroupNewPage.js   (the first line of code)
@@ -1596,7 +1622,7 @@ docker run --rm \
   -it busybox
 ```
 
-We canalso  add some tools such as `ping` in the `dockerfile.prod`
+We can also  add some tools such as `ping` in the `dockerfile.prod`
 after the url of the image for `debugging`:
 
 ```sh
@@ -1694,7 +1720,8 @@ export function time_ago(value){
 }
 ```
 
- do some modifications for the following
+ do some modifications for the following files: <br />
+ - In `RecoverPage.js` and `ConfirmationPage.js` change `setCognitoErrors` to `setErrors`
  - `messageitem.js`
 
 remove the following code:

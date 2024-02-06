@@ -1,10 +1,10 @@
 # Week 6 — Deploying Containers and DNS
 ## Implementation
 
-this is week we start to implementation on AWS ecs with fargate
-Week6 fargate
+This week we start to implement AWS ECS with fargate.
+### RDS
 
-First we need to create a script to check if we can estabilish a connection with the RDS
+Create a script to check if we can estabilish a connection with the RDS
 
 script: `backend-flask/bin/db/test`
 
@@ -28,10 +28,11 @@ finally:
   conn.close()
 
 ```
-change the file permissions: `chmod u+x backend-flask/bin/db/test`
+Change the file permissions: `chmod u+x backend-flask/bin/db/test`
 
-The next step is to create a health check of our `backend-flask` container
-add the following code inside the app.py and optionally remove the rollbar test.
+#### Health-check (Backend)
+Create a health check of our `backend-flask` container.
+Add the following code to `app.py` and optionally comment out the rollbar test to disable it.
 
 ```
 @app.route('/api/health-check')
@@ -39,7 +40,7 @@ def health_check():
   return {'success': True}, 200
 ```
 
-We'll create a new bash script for it bin/flask/health-check:
+Create a new bash script for in `bin/flask/health-check`:
 
 ```
 #!/usr/bin/env python3
@@ -61,9 +62,10 @@ except Exception as e:
   print(e)
   exit(1) # false
 ```
-`chmod u+x ./backend-flask/bin/flask/health-check` 
+#### Change the file permissions: `chmod u+x ./backend-flask/bin/flask/health-check` 
 
-The next step is to create the cloudwatch log group. use the following command using the terminal:
+Cloudwatch log group. <br />
+Use the following command on the terminal:
 ```
 aws logs create-log-group --log-group-name cruddur
 aws logs put-retention-policy --log-group-name cruddur --retention-in-days 1
@@ -75,9 +77,9 @@ aws logs create-log-group --log-group-name "/cruddur/fargate-cluster"
 aws logs put-retention-policy --log-group-name "/cruddur/fargate-cluster" --retention-in-days 1
 ```
 
-Create the container registry the images:
+#### Create the container registry the images:
 
-in this step we will create the `cruddur` cluster in cli
+Create the `cruddur` cluster in cli
 
 ```
 aws ecs create-cluster \
@@ -85,13 +87,13 @@ aws ecs create-cluster \
 --service-connect-defaults namespace=cruddur
 ```
 
-The next step is to prepare our docker configuration. <br />
+The next step is to prepare the docker configurations as shown below. <br />
 We need to create 3 repo's in ECR. 
 - Python, 
 - backend-flask and 
 - frontend-react-js
 
-Create the python repo using the CLI:
+#### Create the python repo using the CLI:
 ```
 aws ecr create-repository \
   --repository-name cruddur-python \
@@ -110,14 +112,14 @@ export ECR_PYTHON_URL="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
 echo $ECR_PYTHON_URL
 ```
 
-The following commands will pull the python:3.10-slim-buster, tag the image and push to the repo in ECR:
+The following commands will pull the python:3.10-slim-buster, tag the image and push to ECR:
 ```
 docker pull python:3.10-slim-buster
 docker tag python:3.10-slim-buster $ECR_PYTHON_URL:3.10-slim-buster
 docker push $ECR_PYTHON_URL:3.10-slim-buster
 ```
 
-Modify dockerfile in backend-flask as below:</br>
+#### Modify dockerfile in backend-flask as below:</br>
 Before:
 ```
 FROM python:3.10-slim-buster
@@ -145,7 +147,7 @@ success: true
 ```
 An alternative to running exposed service such as `CMD [ "python3", "-m" , "flask", "run", "--host=0.0.0.0", "--port=4567"]` in our Dockerfile, you can rely on 3rd party services such as [Gunicorn](https://gunicorn.org/)
 
-Create the repo for the backend flask:
+#### Create the repo for the backend flask:
 ```
 aws ecr create-repository \
   --repository-name backend-flask \
@@ -240,7 +242,7 @@ aws iam put-role-policy \
 
 ```
 
-Give access to cloudwatch to the `cruddurtaskrole`:
+#### Give access to cloudwatch to the `cruddurtaskrole`:
 ```
 aws iam attach-role-policy --policy-arn arn:aws:iam::aws:policy/CloudWatchFullAccess --role-name CruddurTaskRole
 ```
@@ -364,7 +366,7 @@ Trust relationship:
 
 Create a new file /aws/task-definitions/backend-flask.json
 
-```
+```py
 {
   "family": "backend-flask",
   "executionRoleArn": "arn:aws:iam::<account-number>:role/CruddurServiceExecutionRole",
@@ -429,7 +431,7 @@ Create a new file /aws/task-definitions/backend-flask.json
 
 Launch the services and tasks using the following commands:
 
-```
+```sh
 aws ecs register-task-definition --cli-input-json file://aws/task-definitions/backend-flask.json
 ```
 On the console, confirm registration at `Amazon Elastic Container Service` > `Task definitions` > `backend-flask`.
@@ -437,7 +439,7 @@ Once the container is up, we now need to create a security group for it hence th
 create the SG.
 
 Detect the default vpc from within the `backend-flask` folder:
-```
+```sh
 export DEFAULT_VPC_ID=$(aws ec2 describe-vpcs \
 --filters "Name=isDefault, Values=true" \
 --query "Vpcs[0].VpcId" \
@@ -446,7 +448,7 @@ echo $DEFAULT_VPC_ID
 ```
 
 Create the security group:
-```
+```py
 export CRUD_SERVICE_SG=$(aws ec2 create-security-group \
   --group-name "crud-srv-sg" \
   --description "Security group for Cruddur services on ECS" \
@@ -456,11 +458,11 @@ echo $CRUD_SERVICE_SG
 ```
 
 You could also hard code the SG value if the SG already exists (replace with yours):
-```
+```sh
   export CRUD_SERVICE_SG="sg-08050161e2ec5f683"
 ```
 
-```
+```py
 aws ec2 authorize-security-group-ingress \
   --group-id $CRUD_SERVICE_SG \
   --protocol tcp \
@@ -469,7 +471,7 @@ aws ec2 authorize-security-group-ingress \
 ```
 
 Create a file called `service-backend-flask.json` under the path: `/aws/json/` and replace the value of security group and subnetmask:
-```
+```py
 {
   "cluster": "cruddur",
   "launchType": "FARGATE",
@@ -506,7 +508,7 @@ Create a file called `service-backend-flask.json` under the path: `/aws/json/` a
 }
 ```
 Get the Default Subnet ID's:
-```
+```sh
 export DEFAULT_SUBNET_IDS=$(aws ec2 describe-subnets  \
  --filters Name=vpc-id,Values=$DEFAULT_VPC_ID \
  --query 'Subnets[*].SubnetId' \
@@ -520,9 +522,8 @@ aws iam attach-role-policy --role-name CruddurServiceExecutionRole --policy-arn 
 
 Launch the command below from `aws-bootcamp-cruddur-2024` to create the new service for backend flask so that the enable `executecommand` is active (Note that this function can only activated only using the CLI)
 
-```
+```sh
 aws ecs create-service --cli-input-json file://aws/json/service-backend-flask.json
-
 ```
 
 
@@ -530,18 +531,14 @@ aws ecs create-service --cli-input-json file://aws/json/service-backend-flask.js
 
 Install Session manager. here is the [reference](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html#install-plugin-linux)
 
-```
+```py
 curl "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_64bit/session-manager-plugin.deb" -o "session-manager-plugin.deb"
-
-
 sudo dpkg -i session-manager-plugin.deb
-
 session-manager-plugin
-
 ```
 
 connect to the service:
-```
+```sh
 aws ecs execute-command  \
     --region $AWS_DEFAULT_REGION \
     --cluster cruddur \
@@ -555,7 +552,7 @@ Note: the execute command is only possible via CLI.
 
 Add the Fargate dependency to gitpod.yml:
 
-```
+```py
 name: fargate
     before: |
       curl "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_64bit/session-manager-plugin.deb" -o "session-manager-plugin.deb"
@@ -569,7 +566,7 @@ Create the folder `ecs` on the following path:
 Create the new file `connect-to-service` and make it executable `chmod u+x bin/ecs/connect-to-service`<br />
 Supply the task ID for backend-flask.
 
-```
+```sh
 #! /usr/bin/bash
 
 if [ -z "$1" ]; then
@@ -600,7 +597,7 @@ Create a load balancer to control traffic to the backend container:
 
 add the following code to `service-backend-flask.json`
 
-```
+```py
 "loadBalancers": [
       {
           "targetGroupArn": "",
@@ -617,7 +614,7 @@ For the **Frontend** repo:
 We create the task for the frontend-react-js.
 
 First create the task definitiion called frontend-react-js.json under /aws/task-definition
-```sh
+```py
 "family": "frontend-react-js",
     "executionRoleArn": "arn:aws:iam::<account-number>:role/CruddurServiceExecutionRole",
     "taskRoleArn": "arn:aws:iam::<account-number>:role/CruddurTaskRole",
@@ -656,7 +653,7 @@ First create the task definitiion called frontend-react-js.json under /aws/task-
 
 
 create the dockerfile.prod under the frontend-react-js
-``` sh
+```sh
 # Base Image ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 FROM node:16.18 AS build
 
@@ -688,7 +685,7 @@ EXPOSE 3000
 ```
 
 create a file called nginx.conf under the frontend-react-js
-```sh
+```py
 # Set the worker processes
 worker_processes 1;
 
@@ -744,18 +741,17 @@ http {
     }
   }
 }
-
 ```
 
 from the folder frontend-react-js run the command to build:
 
-```
+```sh
 npm run build
 ```
 
-Build the image pointing to the local env 
+Build the image pointing to the local env: 
 
-```
+```sh
 docker build \
 --build-arg REACT_APP_BACKEND_URL="https://4567-${GITPOD_WORKSPACE_ID}.${GITPOD_WORKSPACE_CLUSTER_HOST}" \
 --build-arg REACT_APP_AWS_PROJECT_REGION="$AWS_DEFAULT_REGION" \
@@ -768,8 +764,8 @@ docker build \
 
 ```
 
-Point to the url of the load balancer:
-```
+If you have a Load balancer in place you can point to the url of the load balancer:
+```sh
 docker build \
 --build-arg REACT_APP_BACKEND_URL="http://cruddur-alb-1044769460.us-east-1.elb.amazonaws.com:4567" \
 --build-arg REACT_APP_AWS_PROJECT_REGION="$AWS_DEFAULT_REGION" \
@@ -785,7 +781,7 @@ docker build \
 
 Create the repo for the frontend ECR:
 
-```
+```sh
 aws ecr create-repository \
   --repository-name frontend-react-js \
   --image-tag-mutability MUTABLE
@@ -794,20 +790,20 @@ aws ecr create-repository \
 
 Set the env var:
 
-```
+```sh
 export ECR_FRONTEND_REACT_URL="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/frontend-react-js"
 echo $ECR_FRONTEND_REACT_URL
 ```
 
 Tag the image:
 
-```
+```sh
 docker tag frontend-react-js:latest $ECR_FRONTEND_REACT_URL:latest
 echo $ECR_FRONTEND_REACT_URL
 ```
 
 Test locally:
-```
+```sh
 docker run --rm -p 3000:3000 -it frontend-react-js 
 
 ```
@@ -821,7 +817,7 @@ docker push $ECR_FRONTEND_REACT_URL:latest
 
 Create the `task definition` for the frontend-react-js in `aws` > `task-definitions` > `frontend-react-js.json`
 
-```
+```py
 {
     "family": "frontend-react-js",
     "executionRoleArn": "arn:aws:iam::<account-number>:role/CruddurServiceExecutionRole",
@@ -859,7 +855,7 @@ Create the `task definition` for the frontend-react-js in `aws` > `task-definiti
   }
 ```
 
-and create the service `service-front-end-react-js.json` in `aws` > `json` 
+Create the service `service-frontend-react-js.json` in `aws` > `json` 
 ```
 {
     "cluster": "cruddur",
@@ -867,23 +863,16 @@ and create the service `service-front-end-react-js.json` in `aws` > `json`
     "desiredCount": 1,
     "enableECSManagedTags": true,
     "enableExecuteCommand": true,
-    "loadBalancers": [
-      {
-          "targetGroupArn": "arn:aws:elasticloadbalancing:us-east-1:<account-number>:targetgroup/cruddur-frontend-react-js/de92d78abee2a37a",
-          "containerName": "frontend-react-js",
-          "containerPort": 3000
-      }
-    ],
     "networkConfiguration": {
       "awsvpcConfiguration": {
         "assignPublicIp": "ENABLED",
         "securityGroups": [
-            "sg-081fda7fb7464c107"
+            "sg-08050161e2ec5f683"
           ],
           "subnets": [
-            "subnet-5d5bd827",
-            "subnet-608b5a2c",
-            "subnet-4db0f724"
+            "<subnet-name>",
+            "<subnet-name>",
+            "<subnet-name>"
           ]
       }
     },
@@ -904,34 +893,32 @@ and create the service `service-front-end-react-js.json` in `aws` > `json`
   }
 ```
 
-create the services for the frontend-react-js using the following command
+Invoke the creation of the services in frontend-react-js using the following command:
 
-```
+```sh
 aws ecs create-service --cli-input-json file://aws/json/service-frontend-react-js.json
-
 ```
 
-Launch the task definition for the front end:
+Launch the task definition for the `front end`:
 
 ```
 aws ecs register-task-definition --cli-input-json file://aws/task-definitions/frontend-react-js.json
-
 ```
 
 
 
-Since there is problem with the frontend image, The next step to do is create the image locally (pointing to the local env) and launch it locally
+If you encounter a problem with the frontend image, create the image locally (pointing to the local env) and launch it locally:
 
 ```
 docker ps
 
-docker inspect 9175560cb662
+docker inspect <docker-container-number>
 ```
 
-Note by default bash is not included with busybox and alpie linux
+Note by default bash is not included with busybox and alpine linux
 
-insert this part for the frontend-react-js-json under task-definitions
-```
+Insert this a health check in `frontend-react-js-json` under task-definitions:
+```py
 "healthCheck": {
           "command": [
             "CMD-SHELL",
@@ -945,49 +932,48 @@ insert this part for the frontend-react-js-json under task-definitions
 
 
 In our case the problem is the communication between the ALB and the target group. 
-You need to able the security group for the port 3000
+<bold>Solution:<bold/> Enable the security group to allow incoming connections on port 3000.
 
 
 # Implementation of the SSL and configuration of Domain from Route53
 
-Create the hosted zone for your domain
-Once you have created, take note of the "Value/route traffic". it should be something like this
-```
+Create the hosted zone for your domain.
+Once created, take note of the "Value/route traffic". it should be something like this:
+```txt
 ns-207.awsdns-25.com.
 ns-1481.awsdns-57.org.
 ns-1728.awsdns-24.co.uk.
 ns-595.awsdns-10.net.
 ```
 
-in route53 under domains, go to registered domain.
-from name servers (above the DNSSEC status) check if info is the same of the values that if the "Value/route traffic"
+On route53 under domains > registered domain > name servers (above the DNSSEC status): <br /> 
+Check if info is the same as that of the values in the "Value/route traffic".
 
-To create a SSL/TLS certificate go to AWS Certificate Manager
-Go to request and select "Request a public certificate"
-Under "fully qualified domain name" insert your domain. for example
-example.com
-*.example.com
-As a validation method, select "DNS validation - raccomended" and as key algorithm select RSA 2048.
-Once you have created the certificate request, go to the certificate request and click on create records in route 53.
+To create a SSL/TLS certificate go to AWS Certificate Manager.
+Go to request and select "Request a public certificate".
+Under "fully qualified domain name" insert your domain. for example:
+```example.com or
+*.example.com```
+As a validation method, select "DNS validation - reccommended" and as key algorithm select `RSA 2048`.
+Once you have created the certificate request, on route 53, go to the certificate request > create records.
 
-Note: it takes about a few min to have the status changed from "pending validation" to "issued". but sometimes it could take more than that
+Note: it takes a few minutes to have the status changed from "pending validation" to "issued".
 
-Once you have the certification, is time to do some modification on route53 alb and task definition and eventually then repush the images for the backend and frontend
+Once you have the certificate, Modify route53 alb and task definition and redeploy the images for the backend and frontend to ECR.
 
-from the hosted zone created before, create 2 new records.
+On the hosted zone previously created, create 2 new records.
 
-on for example the domain.co.uk and select as a record type "CNAME - routes traffic to another domain name and to some aws resource", toggle on alias and select the endpoint and region. for the routing policy select "simple routing"
+Select as a record type "CNAME - routes traffic to another domain name and to some aws resource", toggle alias on and select the endpoint and region. The routing policy should be "simple routing".
 
-do the same thing for the api.domain.co.uk with the same configuration above.
+Repeat for any subdomains eg `api.domain.co.uk` with the same configuration above.
 
-
-from the task definition of the backend, edit the following line:
+In the task definition of the backend, edit the following lines:
 ```sh
    {"name": "FRONTEND_URL", "value": "https://example.co.uk"},
    {"name": "BACKEND_URL", "value": "https://api.example.co.uk"},
 ```
 
-once you done, relunch the task definition and recreate the image of the frontend and push it. 
+Once you, relaunch the task definition and recreate the image of the frontend and push it. 
 
 
 ```sh
@@ -1008,7 +994,7 @@ Note: make sure to open the SG of the container backend flask from the SG of the
 
 In this part of implementation, we need to create 2 docker file. 
 
-one called Dockerfile with the following code which has the debug on
+1. `Dockerfile` with the following code which has the debug on:
 ```sh
 FROM <account-number>.dkr.ecr.us-east-1.amazonaws.com/cruddur-python:3.10-slim-buster
 
@@ -1018,8 +1004,6 @@ COPY requirements.txt requirements.txt
 RUN pip3 install -r requirements.txt
 
 COPY . .
-
-
 
 EXPOSE ${PORT}
 CMD [ "python3", "-m" , "flask", "run", "--host=0.0.0.0", "--port=4567", "--debug"]
@@ -1047,7 +1031,7 @@ CMD [ "python3", "-m" , "flask", "run", "--host=0.0.0.0", "--port=4567", "--no-d
 Make sure to test the docker production changes before pushing the image to the ECR repo.
 In our case, we run the docker compose up using the dockerfile rather than recall the build and run process.
 
-Below are the scripts for the building for the backend and frontend
+Below are the scripts for the building of backend and frontend:
 
 ```
 #! /usr/bin/bash
@@ -1104,7 +1088,8 @@ docker run --rm \
 ```
 
 
-another implementation that we did is to push the image to ecr. create the script under /backend-flask/bin/docker/push/backend-flask-prod
+Push the image to ecr. 
+Create a script under `/backend-flask/bin/docker/push/backend-flask-prod`
 
 ```
 #! /usr/bin/bash
@@ -1118,7 +1103,7 @@ docker push $ECR_BACKEND_FLASK_URL:latest
 
 ```
 
-same for the frontend under ./bin/docker/push/frontend-react-js-prod
+Create a script under `./bin/docker/push/frontend-react-js-prod`
 ```sh
 #! /usr/bin/bash
 
@@ -1130,10 +1115,10 @@ docker tag frontend-react-js-prod:latest $ECR_FRONTEND_REACT_URL:latest
 docker push $ECR_FRONTEND_REACT_URL:latest
 ```
 
-We develop also a script that makes it easy the deployment of the ecs backend-flask.
-This file is under /bin/ecs/force-deploy-backend-flask
+Script to simplify the deployment of the ecs backend-flask.
+This file is under `/bin/ecs/force-deploy-backend-flask`
 
-```
+```py
 #! /usr/bin/bash
 
 CLUSTER_NAME="cruddur"
@@ -1162,7 +1147,7 @@ aws ecs update-service \
 #--output table
 ```
 
-the next implementation is to create the absolute path using the following code for some code of the scripts under the /backend-flask/bin
+Create the absolute path using the following code for the scripts under the `/backend-flask/bin`.
 ```
 ABS_PATH=$(readlink -f "$0")
 BUILD_PATH=$(dirname $ABS_PATH)
@@ -1179,9 +1164,9 @@ the files affected are
 /docker/build/backend-flask-prod
 /docker/build/frontend-react-js-prod
 
-The location of the ./backend-flask/bin has been moved to the previous folder apart for the ./flask/health-check
+The location of the ./backend-flask/bin has been moved to the previous folder apart from the ./flask/health-check
 
-For any changes of the backend or frontend, do the build tag and push and force the deployment.
+For any changes of the backend or frontend, build, tag, push and force the redeployment.
 
 # Fixing the Check Auth Token
 As you may already know, at the moment the token wont update.
@@ -1235,7 +1220,7 @@ import {getAccessToken} from '../lib/CheckAuth';
 ```
 
 
-```
+```py
   await getAccessToken()
   const access_token = localStorage.getItem("access_token")
 ```
@@ -1245,9 +1230,9 @@ import {getAccessToken} from '../lib/CheckAuth';
 Authorization': `Bearer ${access_token}`
 ```
 
-# Implementation of Xray on Ecs and Container Insights
+## Implementation of Xray on ECS and Container Insights.
 
-on our task definition backend and frontend, add the following part for the xray
+On our task definitions for both backend and frontend, add the following part to invoke `aws xray`:
 ```
 {
       "name": "xray",
@@ -1264,8 +1249,8 @@ on our task definition backend and frontend, add the following part for the xray
     },
 ```
 
-create the script to create the new task definition
-on the folder aws-bootcamp-cruddur-2023/bin/backend create a file called register.
+Create the new task definition:
+in the folder `aws-bootcamp-cruddur-2023/bin/backend` create a file called `register`:
 ```sh
 #! /usr/bin/bash
 
@@ -1281,8 +1266,8 @@ aws ecs register-task-definition \
 --cli-input-json "file://$TASK_DEF_PATH"
 ```
 
-do the same thing for the frontend
-on the folder aws-bootcamp-cruddur-2023/bin/frontend create a file called register.
+Repeat in frontend. <br />
+In the folder `aws-bootcamp-cruddur-2024/bin/frontend` create a file `register`.
 
 ```sh
 #! /usr/bin/bash
@@ -1299,7 +1284,7 @@ aws ecs register-task-definition \
 --cli-input-json "file://$TASK_DEF_PATH"
 ```
 
-on the folder aws-bootcamp-cruddur-2023/bin/backend create a file called run.
+In the folder `aws-bootcamp-cruddur-2024/bin/backend` create the file `run`.
 ```sh
 #! /usr/bin/bash
 
@@ -1317,9 +1302,9 @@ docker run --rm \
 
 ```
 NOTE:
-add the  /bin/bash after the -it backend-flask-prod if you want to shell inside the contianer.
+add the  /bin/bash after the -it backend-flask-prod if you want to shell into the contianer. <br />
 
-on the folder aws-bootcamp-cruddur-2023/bin/frontend create a file called run.
+In the folder `aws-bootcamp-cruddur-2023/bin/frontend` create the file `run`.
 ```sh
 #! /usr/bin/bash
 
@@ -1337,7 +1322,7 @@ docker run --rm \
 
 ```
 
-change the code of the docker-compose-gitpod.yml of the backend
+Change the code in docker-compose-gitpod.yml of the backend
 
 ```
 environment:
@@ -1363,13 +1348,13 @@ environment:
       AWS_COGNITO_USER_POOL_CLIENT_ID: "${APP_CLIENT_ID}"
 ```
 
-with the following code
+with the following code:
 ```
   env_file:
       - backend-flask.env
 ```
 
-same thing for the frontend
+Repeat for the `frontend`:
 
 ```sh
 environment:
@@ -1389,12 +1374,12 @@ with the following code
       - frontend-react-js.env
 ```
 
-Since the file env does not pass the value of the env var, there is additional implementation that needs to be done.
+Since the file env does not pass the value of the env var, there is additional configuration that needs to be done. <br />
 
-create a file generate-env-gitpod under the aws-bootcamp-cruddur-2023/bin/backend
+Create the file `generate-env-gitpod` under the `aws-bootcamp-cruddur-2024/bin/backend`
 
-and paste the following code
-```
+and paste the following code:
+```sh
 #! /usr/bin/env ruby
 
 require 'erb'
@@ -1406,11 +1391,8 @@ File.write(filename, content)
 
 ```
 
-
-create a file generate-env-gitpod under the aws-bootcamp-cruddur-2023/bin/frontend
-
-and paste the following code
-```
+Create a file `generate-env-gitpod` under the `aws-bootcamp-cruddur-2024/bin/frontend`:
+```py
 #! /usr/bin/env ruby
 
 require 'erb'
@@ -1422,9 +1404,7 @@ File.write(filename, content)
 
 ```
 
-create  a folder called erb and create the following file backend-flask-gitpod.env.erb under erb folder
-
-
+Create  a folder `erb` and create the following file `backend-flask-gitpod.env.erb` in it:
 ```sh
 AWS_ENDPOINT_URL=http://dynamodb-local:8000
 CONNECTION_URL=postgresql://postgres:password@db:5432/cruddur
@@ -1444,7 +1424,7 @@ AWS_COGNITO_USER_POOL_CLIENT_ID=<%= ENV['APP_CLIENT_ID'] %>
 
 ```
 
-create  a folder called erb and create the following file frontend-react-js-gitpod.env.erb 
+In the folder `erb` and create the file `frontend-react-js-gitpod.env.erb`: 
 
 ```sh
 REACT_APP_BACKEND_URL=https://4567-<%= ENV['GITPOD_WORKSPACE_ID'] %>.<%= ENV['GITPOD_WORKSPACE_CLUSTER_HOST'] %>
@@ -1454,40 +1434,40 @@ REACT_APP_AWS_USER_POOLS_ID=<%= ENV['AWS_USER_POOLS_ID'] %>
 REACT_APP_CLIENT_ID=<%= ENV['APP_CLIENT_ID'] %>
 ```
 
-from the gitpod.yml add the scripts to create the files env necessary for the backend and frontend dockers.
+In `gitpod.yml` add the scripts to create the `env vars` necessary for the backend and frontend containers.
 ```
   source  "$THEIA_WORKSPACE_ROOT/bin/backend/generate-env-gitpod"
   source  "$THEIA_WORKSPACE_ROOT/bin/frontend/generate-env-gitpod
 ```
 
 
-In this part of the implementation, we link all the containers to connect with a specific network.
-change the configuration of your docker-compose.yml
-```
+Link all the containers to connect to a specific network. <br />
+Change the configuration of your `docker-compose.yml`: <br />
+From:
+```py
 networks: 
   internal-network:
     driver: bridge
     name: cruddur
 ```
-with the following code
+to:
 
-```
+```py
 networks: 
   cruddur-net:
     driver: bridge
     name: cruddur-net
 ```
 
-and for each services, make sure to attach the crudduer-net network by adding the following code
-```
+For each of services, make sure to attach the `cruddur-net` network by adding the following code:
+```py
   networks:
       - cruddur-net
 ```
 
-to troublshoot, you can use a busy box.
-create a file under aws-bootcamp-cruddur-2023/bin called busybox
-and paste the following code
-```
+To troublshoot, use a `busy box`.
+Create a file under `aws-bootcamp-cruddur-2024/bin` called `busybox`:
+```sh
 #! /usr/bin/bash
 
 docker run --rm \
@@ -1496,56 +1476,58 @@ docker run --rm \
   -it busybox
 ```
 
-also we can add some tools such as ping on our dockerfile.prod
-after url of the image. this is for the debugging
+We canalso  add some tools such as `ping` in the `dockerfile.prod`
+after the url of the image for `debugging`:
 
-```
+```sh
 RUN apt-get update -y
 RUN apt-get install iputils-ping -y
 ```
 # Enable Container Insights
 
-To enable this function, go to the cluster and click on update cluster.
+To enable this function, go to the `cluster` and click on `update cluster`.
 
-Under the section Monitoring, toggle on Use Container Insights
+Under the section `Monitoring`, toggle on `Use Container Insights`.
 
 # Implementation Time Zone
 
-from the ddb/seed change the following line of code
-
+from `ddb/seed` change the following line of code: <br />
+From:
 ```
 now = datetime.now(timezone.utc).astimezone()
 ```
 
-with the following
+To: <br />
 
 ```
 now = datetime.now()
 ```
-from the same file, change also the following code
+In the same file, change: <br />
+From: 
 ```
   created_at = (now + timedelta(hours=-3) + timedelta(minutes=i)).isoformat()
 ```
-with the following
+To: <br />
 
 ```
   created_at = (now - timedelta(days=1) + timedelta(minutes=i)).isoformat()
 ```
 
-from the ddb.py change the following code
+In `ddb.py` change the following code:
+From:
 ```
  now = datetime.now(timezone.utc).astimezone().isoformat()
 created_at = now
 ```
 
-with the following
+To: <br />
 ```
 created_at = datetime.now().isoformat()
 
 ```
 
-from the frontend-react-js/src/lib/ create a file called DateTimeFormats.js with the following code
-```sh
+In `frontend-react-js/src/lib/` create a file called `DateTimeFormats.js` with the following code:
+```py
 import { DateTime } from 'luxon';
 
 export function format_datetime(value) {
@@ -1593,42 +1575,39 @@ export function time_ago(value){
 ```
 
  do some modifications for the following
- - messageitem.js
+ - `messageitem.js`
 
- 
-
-remove the following code
-
-```
+remove the following code:
+```py
 import { DateTime } from 'luxon';
 ```
 
-and replace with 
+and replace with:
 
-```
+```py
 import { format_datetime, message_time_ago } from '../lib/DateTimeFormats';
 ```
 
-same for the following code
+Repeat for the following code:
+From:
 ```
 <div className="created_at" title={props.message.created_at}>
 <span className='ago'>{format_time_created_at(props.message.created_at)}</span> 
 ```
 
-with the new
-
+To:
 ```
   <div className="created_at" title={format_datetime(props.message.created_at)}>
   <span className='ago'>{message_time_ago(props.message.created_at)}</span> 
 ```
 
-replace also this part of the code
+Replace:
 ```
 <Link className='message_item' to={`/messages/@`+props.message.handle}>
 <div className='message_avatar'></div>
 ```
 
-with the following
+With:
 ```
  <div className='message_item'>
       <Link className='message_avatar' to={`/messages/@`+props.message.handle}></Link>
@@ -1643,15 +1622,15 @@ with
  </div>
 ```
 
-from the messageitem.css do the following changes
+from the `messageitem.css` make the following changes:
 
-move portion of the code
+move portion of the code:
 ```
  cursor: pointer;
 text-decoration: none;
 ```
 
-add  the following code
+add  the following code:
 ```sh
 
 .message_item .avatar {
@@ -1663,35 +1642,35 @@ add  the following code
 
 
 
-do the same for the following
-- messagegroupitem.js
+Do the same for the following file:
+- `messagegroupitem.js`
 
-remove the following code
+remove the following code:
 
 ```
 import { DateTime } from 'luxon';
 ```
 
-and replace with 
+and replace with:
 
 ```
 import { format_datetime, message_time_ago } from '../lib/DateTimeFormats';
 ```
 
-same for the following code
+same for the following code:
 ```
    <div className="created_at" title={props.message_group.created_at}>
   <span className='ago'>{format_time_created_at(props.message_group.created_at)}</span> 
 ```
 
-and replace with the following
+and replace with the following:
 
 ```sh
 
 <div className="created_at" title={format_datetime(props.message_group.created_at)}>
 <span className='ago'>{message_time_ago(props.message_group.created_at)}</span> 
 ```
-remove also this portion of the code
+Also remove this portion of the code:
 ```
 const format_time_created_at = (value) => {
     // format: 2050-11-20 18:32:47 +0000
@@ -1710,31 +1689,31 @@ const format_time_created_at = (value) => {
   };
 ```
 
-from the activitycontent.js do the following amendments:
+from the `activitycontent.js` do the following ammendments:
 
-remove the following code
+Remove the following code:
 ```sh
 import { DateTime } from 'luxon';
 ```
-and replace with
+and replace with:
 
 ```sh
 import { format_datetime, time_ago } from '../lib/DateTimeFormats';
 ```
 
-and change the following code
+and change the following code:
 ```
   <div className="created_at" title={props.activity.created_at}>
   <span className='ago'>{format_time_created_at(props.activity.created_at)}</span> 
 ```
-with the following
+to the following:
 
 ```
 <div className="created_at" title={format_datetime(props.activity.created_at)}>
 <span className='ago'>{time_ago(props.activity.created_at)}</span> 
 ```
 
-remove also this portion of the code
+Also remove this portion of the code:
 ```sh
  const format_time_created_at = (value) => {
     // format: 2050-11-20 18:32:47 +0000
@@ -1770,25 +1749,26 @@ remove also this portion of the code
   };
 ```
 
-do the same changes for the following line
+Do the same changes for the following line:
+Replace:
 ```
  <span className='ago'>{format_time_expires_at(props.activity.expires_at)}</span>
 
- ````
+```
 
- with the following
+ With the following:
  ```
  <span className='ago'>{time_ago(props.activity.expires_at)}</span>
  ```
 
-amend the following code
- ```
+ammend the following code:
+```py
      expires_at =  <div className="expires_at" title={props.activity.expires_at}>
 ```
 
-with the new one
+with the new one:
 
-```
+```py
    expires_at =  <div className="expires_at" title={format_datetime(props.activity.expires_at)}>
 ```
 

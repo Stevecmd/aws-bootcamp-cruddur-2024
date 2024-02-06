@@ -637,7 +637,7 @@ First create the task definitiion called **frontend-react-js.json** under `/aws/
 ```
 
 
-create the dockerfile.prod in `frontend-react-js`:
+create the Dockerfile.prod in `frontend-react-js`:
 ```sh
 # Base Image ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 FROM node:16.18 AS build
@@ -670,7 +670,7 @@ EXPOSE 3000
 ```
 
 Create the file `nginx.conf` under `frontend-react-js`: <br />
-**NB** Only run one container per process. <br />
+**NB:** Only run one container per process. <br />
 ```py
 # Set the worker processes
 worker_processes 1;
@@ -1179,6 +1179,10 @@ docker build \
 ```
 
 Note: make sure to open the SG of the container backend flask from the SG of the RDS for the port 5432 otherwise you wont be able to use the test script to check the RDS from the container backendflask in ECS.
+I had to do some debugging to remove errors and get all the endpoints to work, this is evdienced by the commit: <br />
+[Debugging updates](https://github.com/Stevecmd/aws-bootcamp-cruddur-2024/commit/d75da25fc5794f75a84178f1c0fea1de465d5a2d) <br />
+Alternatively you could check the branch:
+[Debugging](https://github.com/Stevecmd/aws-bootcamp-cruddur-2024/tree/Debugging)
 
 # Securing Backend flask
 

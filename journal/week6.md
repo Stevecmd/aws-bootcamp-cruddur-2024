@@ -1267,7 +1267,7 @@ aws ecs update-service \
 #--output table
 ```
 
-Create the absolute path using the following code for the scripts under the `/backend-flask/bin`.
+Create the absolute path using the following configuration for the scripts in `/backend-flask/bin`.
 ```
 ABS_PATH=$(readlink -f "$0")
 BUILD_PATH=$(dirname $ABS_PATH)
@@ -1821,7 +1821,7 @@ and replace with:
 import { format_datetime, time_ago } from '../lib/DateTimeFormats';
 ```
 
-and change the following code:
+Modify the following code:
 ```
   <div className="created_at" title={props.activity.created_at}>
   <span className='ago'>{format_time_created_at(props.activity.created_at)}</span> 
@@ -1876,17 +1876,17 @@ Replace:
 
 ```
 
- With the following:
+ with the following:
  ```
  <span className='ago'>{time_ago(props.activity.expires_at)}</span>
  ```
 
-ammend the following code:
+Replace:
 ```py
      expires_at =  <div className="expires_at" title={props.activity.expires_at}>
 ```
 
-with the new one:
+with the following:
 
 ```py
    expires_at =  <div className="expires_at" title={format_datetime(props.activity.expires_at)}>

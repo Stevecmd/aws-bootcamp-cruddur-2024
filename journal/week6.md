@@ -753,11 +753,11 @@ from the folder frontend-react-js run the command to build:
 npm run build
 ```
 
-run the following command to build the image pointing to the local env 
+Build the image pointing to the local env 
 
 ```
 docker build \
---build-arg REACT_APP_BACKEND_URL="https://${CODESPACE_NAME}-4567.${GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}" \
+--build-arg REACT_APP_BACKEND_URL="https://4567-${GITPOD_WORKSPACE_ID}.${GITPOD_WORKSPACE_CLUSTER_HOST}" \
 --build-arg REACT_APP_AWS_PROJECT_REGION="$AWS_DEFAULT_REGION" \
 --build-arg REACT_APP_AWS_COGNITO_REGION="$AWS_DEFAULT_REGION" \
 --build-arg REACT_APP_AWS_USER_POOLS_ID="$AWS_USER_POOLS_ID" \
@@ -768,7 +768,7 @@ docker build \
 
 ```
 
-To point to the url of the load balancer:
+Point to the url of the load balancer:
 ```
 docker build \
 --build-arg REACT_APP_BACKEND_URL="http://cruddur-alb-1044769460.us-east-1.elb.amazonaws.com:4567" \
@@ -783,7 +783,7 @@ docker build \
 ```
 
 
-create the repo for the frontend ECR:
+Create the repo for the frontend ECR:
 
 ```
 aws ecr create-repository \
@@ -792,7 +792,7 @@ aws ecr create-repository \
 ```
 
 
-and set the env var:
+Set the env var:
 
 ```
 export ECR_FRONTEND_REACT_URL="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/frontend-react-js"
@@ -803,6 +803,7 @@ Tag the image:
 
 ```
 docker tag frontend-react-js:latest $ECR_FRONTEND_REACT_URL:latest
+echo $ECR_FRONTEND_REACT_URL
 ```
 
 Test locally:
@@ -818,7 +819,7 @@ docker push $ECR_FRONTEND_REACT_URL:latest
 ```
 
 
-create the the task definition for the frontend-react-js
+Create the `task definition` for the frontend-react-js in `aws` > `task-definitions` > `frontend-react-js.json`
 
 ```
 {
@@ -858,7 +859,7 @@ create the the task definition for the frontend-react-js
   }
 ```
 
-and the service-front-react-js.json
+and create the service `service-front-end-react-js.json` in `aws` > `json` 
 ```
 {
     "cluster": "cruddur",
@@ -901,57 +902,6 @@ and the service-front-react-js.json
       ]
     }
   }
-```
-
-```
-{
-    "cluster": "cruddur",
-    "launchType": "FARGATE",
-    "desiredCount": 1,
-    "enableECSManagedTags": true,
-    "enableExecuteCommand": true,
-    "loadBalancers": [
-      {
-          "targetGroupArn": "arn:aws:elasticloadbalancing:us-east-1:<account-number>:targetgroup/cruddur-frontend-react-js/de92d78abee2a37a",
-          "containerName": "frontend-react-js",
-          "containerPort": 3000
-      }
-    ],
-    "networkConfiguration": {
-      "awsvpcConfiguration": {
-        "assignPublicIp": "ENABLED",
-        "securityGroups": [
-            "sg-081fda7fb7464c107"
-          ],
-          "subnets": [
-            "subnet-5d5bd827",
-            "subnet-608b5a2c",
-            "subnet-4db0f724"
-          ]
-      }
-    },
-    "propagateTags": "SERVICE",
-    "serviceName": "frontend-react-js",
-    "taskDefinition": "frontend-react-js",
-    "serviceConnectConfiguration": {
-      "enabled": true,
-      "namespace": "cruddur",
-      "services": [
-        {
-          "portName": "frontend-react-js",
-          "discoveryName": "frontend-react-js",
-          "clientAliases": [{"port": 3000}]
-        }
-      ]
-    }
-  }
-```
-
-before lunch the task definition for the front end
-
-```
-aws ecs register-task-definition --cli-input-json file://aws/task-definitions/frontend-react-js.json
-
 ```
 
 create the services for the frontend-react-js using the following command
@@ -960,6 +910,15 @@ create the services for the frontend-react-js using the following command
 aws ecs create-service --cli-input-json file://aws/json/service-frontend-react-js.json
 
 ```
+
+Launch the task definition for the front end:
+
+```
+aws ecs register-task-definition --cli-input-json file://aws/task-definitions/frontend-react-js.json
+
+```
+
+
 
 Since there is problem with the frontend image, The next step to do is create the image locally (pointing to the local env) and launch it locally
 

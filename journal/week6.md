@@ -595,10 +595,10 @@ Supply the task ID for backend-flask when running it.
 In the CLI, we can list our tasks by running:
 `aws ecs list-tasks --cluster cruddur`
 
-For the **Frontend** repo:
-We create the task for the frontend-react-js.
+For the **Frontend** repo: <br />
+Create the task for **frontend-react-js**.
 
-First create the task definitiion called frontend-react-js.json under /aws/task-definition
+First create the task definitiion called **frontend-react-js.json** under `/aws/task-definition`.
 ```py
 "family": "frontend-react-js",
     "executionRoleArn": "arn:aws:iam::<account-number>:role/CruddurServiceExecutionRole",
@@ -1018,7 +1018,7 @@ Backend TG <br />
 - **Create Load Balancer**
 
 Allow communication between the ALB and the target group. 
-<bold>Solution:<bold/> Ensure that the security group allows incoming connections on port 3000.
+**Solution:** Ensure that the security group allows incoming connections on port 3000.
 
 Confirm that RDS is running then confirm access to RDS, in `backend-flask` run:
 ```sh
@@ -1045,7 +1045,7 @@ Add the following code to `service-backend-flask.json` and fill in the details:
       }
     ],
 ```
-<bold> Hint: </bold> <br />
+**Hint:** <br />
 On the targetGroupArn, insert the `arn` of the Load balancer target group, the targetgroup here is `backend-flask`
 on containerPort `4567`.
 
@@ -1178,7 +1178,7 @@ Make sure to test the docker production changes before pushing the image to the 
 In this case run `docker compose up` using the dockerfile rather than deploying the build and run process.
 
 Below are the scripts for the building the repo's: <br /> 
-<bold> backend </bold>:
+**backend**:
 
 ```
 #! /usr/bin/bash
@@ -1196,7 +1196,7 @@ docker build \
 "$BACKEND_FLASK_PATH/."
 ```
 Note that the REACT_APP_BACKEND_URL should point to your domain instead to your gitpod/codespace. <br />
-<bold>frontend </bold> <br />
+**frontend** <br />
 ```
 #! /usr/bin/bash
 

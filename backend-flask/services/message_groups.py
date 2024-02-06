@@ -23,9 +23,9 @@ class MessageGroups:
         print("Error in query_value:", e)
     # end debug
 
-    # my_user_uuid = db.query_value(sql,{
-    #   'cognito_user_id': cognito_user_id
-    # })
+    my_user_uuid = db.query_value(sql,{
+      'cognito_user_id': cognito_user_id
+    })
 
     print(f"UUID: {my_user_uuid}")
 

@@ -978,7 +978,8 @@ Create a new Security group:
 
 #### Modify original SG.
 The original Security group allowed traffic to your Gitpod IP address on port 4567, we can now add a setting and allow 
-traffic to our security group that we just created, port 4567 as well, description: Cruddur ALB. **You could delete the previous rule.**
+traffic to our security group that we just created, port 4567 as well, description: Cruddur ALB. <br />
+**You may delete the previous rule as it is not necessary anymore.**
 
 ### Create a Target Groups
 Frontend TG <br />
@@ -1003,7 +1004,7 @@ Backend TG <br />
 - Interval: '30'
 - Skip `Register targets` and Create.
 
-- On the console create an **Application Load Balancer**.
+  On the console create an **Application Load Balancer**.
 - Load balancer name: `cruddur-alb`
 - Internet facing
 - IPv4

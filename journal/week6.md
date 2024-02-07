@@ -1065,7 +1065,7 @@ docker build \
 --build-arg REACT_APP_AWS_COGNITO_REGION="$AWS_DEFAULT_REGION" \
 --build-arg REACT_APP_AWS_USER_POOLS_ID="$AWS_USER_POOLS_ID" \
 --build-arg REACT_APP_CLIENT_ID="$APP_CLIENT_ID" \
--t frontend-react-js \
+-t frontend-react-js-prod \
 -f Dockerfile.prod \
 .
 ```
@@ -1093,7 +1093,7 @@ aws ecs create-service --cli-input-json file://aws/json/service-frontend-react-j
 ```sh
 aws ecs create-service --cli-input-json file://aws/json/service-backend-flask.json
 ```
-If it fails, go to the security group `cruddur-alb-sg` and create a temporary rule that allows coonections from anywhere on ports `4567` and `3000`. They can be named `TMP1` and `TMP2`. <br />
+If it fails, go to the security group `cruddur-alb-sg` and create a temporary rule that allows connections from anywhere on ports `4567` and `3000`. Name them `TMP1` and `TMP2`. <br />
 Confirm Load balancer and ECS are online, <br />
 Visit the ECS public port and append `:4567/api/health-check`. <br />
 - It should return `success`.
